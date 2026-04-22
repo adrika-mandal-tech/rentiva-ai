@@ -146,4 +146,4 @@ It reduces manual effort, improves transparency, and introduces intelligent deci
 B.Tech CSE (Data Science & AI)
 SRM University Delhi-NCR
 ## 👤 Connect with Me
-- 🔗 [LinkedIn](https://www.linkedin.com/in/adrika-mandal-753226246/)
+[LinkedIn](https://www.linkedin.com/in/adrika-mandal-753226246/)
