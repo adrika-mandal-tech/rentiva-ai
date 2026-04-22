@@ -1,0 +1,1827 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RENTIVA.ai - Tenant Portal</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="rentiva-gradient.css">
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged, signOut, GoogleAuthProvider } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-auth.js";
+    import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-firestore.js";
+    const firebaseConfig = {
+      apiKey: "AIzaSyCG8oXE_17nrbzKZ2v68aEhNYkhrGyiPjU",
+      authDomain: "rentiva-ai.firebaseapp.com",
+      projectId: "rentiva-ai",
+      storageBucket: "rentiva-ai.firebasestorage.app",
+      messagingSenderId: "72917717553",
+      appId: "1:72917717553:web:c4c163e171b5c73a733b10",
+      measurementId: "G-1PT2RQW0QF"
+    };
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    window.auth = auth;
+    window.db = db;
+    const provider = new GoogleAuthProvider();
+    provider.setCustomParameters({
+      prompt: 'select_account'
+    });
+    onAuthStateChanged(auth, (user) => {
+      if (!user) {
+        window.location.href = 'landing.html';
+      } else {
+        const profileName = document.getElementById('profileName');
+        const avatarImg = document.getElementById('avatarImg');
+        const avatarText = document.getElementById('avatarText');
+        const signoutBtn = document.getElementById('signout-btn');
+        if (profileName) profileName.textContent = user.displayName || user.email.split('@')[0];
+        const savedImg = localStorage.getItem(`profile_img_${user.uid}`);
+        if (savedImg || user.photoURL) {
+          if (avatarImg) {
+            avatarImg.src = savedImg || user.photoURL;
+            avatarImg.style.display = 'block';
+          }
+          if (avatarText) avatarText.style.display = 'none';
+        }
+        // Sync with tenant-core.js state if it exists
+        if (window.syncProfileData) {
+          window.syncProfileData(user);
+        }
+        if (signoutBtn) signoutBtn.style.display = 'flex';
+      }
+    });
+    window.signOutUserAction = async () => {
+      try {
+        await signOut(auth);
+        window.location.href = 'landing.html';
+      } catch (error) {
+        console.error("Error signing out:", error);
+      }
+    };
+    window.handleImageUpload = (event) => {
+      const file = event.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const avatarImg = document.getElementById('avatarImg');
+          const avatarText = document.getElementById('avatarText');
+          if (avatarImg) {
+            avatarImg.src = e.target.result;
+            avatarImg.style.display = 'block';
+            if (avatarText) avatarText.style.display = 'none';
+          }
+          if (auth.currentUser) {
+            localStorage.setItem(`profile_img_${auth.currentUser.uid}`, e.target.result);
+            if (typeof toast === 'function') {
+              toast('Updated', 'Profile image updated successfully!', 'success');
+            }
+          }
+        };
+        reader.readAsDataURL(file);
+      }
+    };
+  </script>
+  <style>
+    :root {
+      --bg: #f6fdf8;
+      --panel: rgba(255, 255, 255, 0.85);
+      --panel-solid: #ffffff;
+      --text: #0f172a;
+      --muted: #64748b;
+      --border: rgba(15, 23, 42, 0.10);
+      --primary: #10b981;
+      --secondary: #3b82f6;
+      --accent: #06b6d4;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+      --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.08);
+      --shadow-md: 0 10px 30px rgba(15, 23, 42, 0.10);
+      --shadow-lg: 0 18px 45px rgba(15, 23, 42, 0.14);
+      --radius: 18px;
+      --radius-sm: 12px;
+      --gradient: linear-gradient(135deg, #10b981 0%, #3b82f6 45%, #06b6d4 100%);
+      --gradient-soft: radial-gradient(1200px 800px at 20% 10%, rgba(16, 185, 129, 0.18), transparent 60%), radial-gradient(900px 700px at 90% 30%, rgba(59, 130, 246, 0.18), transparent 55%), radial-gradient(900px 700px at 50% 95%, rgba(6, 182, 212, 0.16), transparent 55%);
+      --transition: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    [data-theme="dark"] {
+      --bg: #081018;
+      --panel: rgba(15, 23, 42, 0.55);
+      --panel-solid: #0b1220;
+      --text: #e5e7eb;
+      --muted: #94a3b8;
+      --border: rgba(226, 232, 240, 0.14);
+      --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.28);
+      --shadow-md: 0 12px 35px rgba(0, 0, 0, 0.35);
+      --shadow-lg: 0 20px 60px rgba(0, 0, 0, 0.45);
+      --gradient-soft: radial-gradient(1200px 800px at 20% 10%, rgba(15, 23, 42, 0.4), transparent 60%), radial-gradient(900px 700px at 90% 30%, rgba(16, 185, 129, 0.1), transparent 55%);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      height: 100%;
+    }
+
+    body {
+      margin: 0;
+      font-family: 'Inter', sans-serif;
+      color: var(--text);
+      background: var(--bg);
+      background-image: var(--gradient-soft);
+      overflow-x: hidden;
+    }
+
+    button,
+    input,
+    select,
+    textarea {
+      font-family: inherit;
+    }
+
+    .app {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: 320px 1fr;
+    }
+
+    .sidebar {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      padding: 18px;
+      border-right: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.35);
+      -webkit-backdrop-filter: blur(14px);
+      backdrop-filter: blur(14px);
+    }
+
+    [data-theme="dark"] .sidebar {
+      background: rgba(2, 6, 23, 0.35);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 10px 14px;
+    }
+
+    .brand-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .brand-badge {
+      width: 40px;
+      height: 40px;
+      border-radius: 14px;
+      background: var(--gradient);
+      display: grid;
+      place-items: center;
+      color: white;
+      box-shadow: var(--shadow-md);
+    }
+
+    .brand-title {
+      display: flex;
+      flex-direction: column;
+      line-height: 1.1;
+    }
+
+    .brand-title strong {
+      font-size: 16px;
+      letter-spacing: 0.2px;
+    }
+
+    .rentiva-heading {
+      background: linear-gradient(135deg, #eab308 0%, #06b6d4 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      color: transparent;
+      display: inline-block;
+    }
+
+    .brand-title span {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .icon-btn {
+      border: 1px solid var(--border);
+      background: var(--panel);
+      color: var(--text);
+      border-radius: 12px;
+      width: 42px;
+      height: 42px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: transform var(--transition), border-color var(--transition);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .icon-btn:hover {
+      transform: translateY(-1px);
+      border-color: rgba(16, 185, 129, 0.35);
+    }
+
+    .profile {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px;
+      box-shadow: var(--shadow-md);
+      display: grid;
+      grid-template-columns: 54px 1fr;
+      gap: 12px;
+      align-items: center;
+      margin: 8px 0 14px;
+    }
+
+    .avatar {
+      width: 54px;
+      height: 54px;
+      border-radius: 18px;
+      background: var(--gradient);
+      display: grid;
+      place-items: center;
+      color: white;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      box-shadow: var(--shadow-sm);
+      overflow: hidden;
+    }
+
+    .avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: none;
+    }
+
+    .pill {
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: rgba(16, 185, 129, 0.10);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .pill.overdue {
+      background: rgba(239, 68, 68, 0.12);
+    }
+
+    .pill.paid {
+      background: rgba(16, 185, 129, 0.14);
+    }
+
+    .pill.pending {
+      background: rgba(245, 158, 11, 0.14);
+    }
+
+    .profile-meta {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      min-width: 0;
+    }
+
+    .profile-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .profile-name {
+      font-weight: 900;
+      font-size: 15px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .profile-sub {
+      color: var(--muted);
+      font-size: 12px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .nav {
+      display: grid;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .nav-btn {
+      width: 100%;
+      border: 1px solid var(--border);
+      background: var(--panel);
+      color: var(--text);
+      border-radius: 16px;
+      padding: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      cursor: pointer;
+      transition: transform var(--transition), border-color var(--transition);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .nav-btn:hover {
+      transform: translateY(-1px);
+      border-color: rgba(59, 130, 246, 0.35);
+    }
+
+    .nav-btn.active {
+      border-color: rgba(16, 185, 129, 0.55);
+      background: rgba(16, 185, 129, 0.10);
+    }
+
+    .nav-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+    }
+
+    .nav-left i {
+      width: 26px;
+      height: 26px;
+      display: grid;
+      place-items: center;
+      border-radius: 10px;
+      background: rgba(59, 130, 246, 0.10);
+      border: 1px solid var(--border);
+    }
+
+    .nav-title {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 0;
+    }
+
+    .nav-title strong {
+      font-size: 13px;
+      font-weight: 900;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .nav-title span {
+      font-size: 11px;
+      color: var(--muted);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .badge {
+      font-size: 12px;
+      font-weight: 900;
+      background: rgba(59, 130, 246, 0.12);
+      border: 1px solid var(--border);
+      padding: 5px 10px;
+      border-radius: 999px;
+      white-space: nowrap;
+    }
+
+    .badge.warn {
+      background: rgba(245, 158, 11, 0.14);
+    }
+
+    .badge.danger {
+      background: rgba(239, 68, 68, 0.14);
+    }
+
+    .badge.success {
+      background: rgba(16, 185, 129, 0.14);
+    }
+
+    .sidebar-footer {
+      margin-top: 12px;
+      padding: 10px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.4;
+    }
+
+    .main {
+      min-width: 0;
+      display: grid;
+      grid-template-rows: auto 1fr;
+    }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 30;
+      padding: 16px 18px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.55);
+      -webkit-backdrop-filter: blur(16px);
+      backdrop-filter: blur(16px);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+    }
+
+    [data-theme="dark"] .topbar {
+      background: rgba(2, 6, 23, 0.55);
+    }
+
+    .topbar-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .page-title {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+
+    .page-title strong {
+      font-size: 16px;
+      font-weight: 900;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .page-title span {
+      color: var(--muted);
+      font-size: 12px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .topbar-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .content {
+      padding: 18px;
+      max-width: 1600px;
+      width: 100%;
+    }
+
+    .view {
+      display: none;
+      animation: fadeUp 260ms ease-out;
+    }
+
+    .view.active {
+      display: block;
+    }
+
+    @keyframes fadeUp {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .grid {
+      display: grid;
+      gap: 14px;
+    }
+
+    .grid.cols-2 {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .grid.cols-4 {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .grid.wide-right {
+      grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.35fr);
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      box-shadow: var(--shadow-md);
+      -webkit-backdrop-filter: blur(16px);
+      backdrop-filter: blur(16px);
+      min-width: 0;
+    }
+
+    .card-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .card-title {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      min-width: 0;
+    }
+
+    .card-title strong {
+      font-size: 13px;
+      font-weight: 900;
+    }
+
+    .card-title span {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .metric {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+      margin-top: 4px;
+    }
+
+    .metric .value {
+      font-size: 26px;
+      font-weight: 900;
+      letter-spacing: -0.6px;
+    }
+
+    .metric .hint {
+      font-size: 12px;
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    .progress {
+      width: 100%;
+      height: 10px;
+      border-radius: 999px;
+      background: rgba(100, 116, 139, 0.18);
+      overflow: hidden;
+      border: 1px solid var(--border);
+    }
+
+    .progress>div {
+      height: 100%;
+      border-radius: 999px;
+      background: var(--gradient);
+      width: 0;
+      transition: width var(--transition);
+    }
+
+    .btn {
+      border: 1px solid var(--border);
+      background: var(--panel-solid);
+      color: var(--text);
+      border-radius: 14px;
+      padding: 10px 12px;
+      font-weight: 900;
+      cursor: pointer;
+      transition: transform var(--transition), border-color var(--transition);
+      box-shadow: var(--shadow-sm);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .btn:hover {
+      transform: translateY(-1px);
+      border-color: rgba(16, 185, 129, 0.35);
+    }
+
+    .btn.primary {
+      background: var(--gradient);
+      color: #ffffff;
+      border-color: transparent;
+    }
+
+    .btn.danger {
+      background: rgba(239, 68, 68, 0.12);
+      border-color: rgba(239, 68, 68, 0.22);
+    }
+
+    .form {
+      display: grid;
+      gap: 12px;
+    }
+
+    .split {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .field {
+      display: grid;
+      gap: 6px;
+    }
+
+    .field label {
+      font-size: 12px;
+      color: var(--muted);
+      font-weight: 900;
+      letter-spacing: 0.3px;
+      text-transform: uppercase;
+    }
+
+    .field input,
+    .field select,
+    .field textarea {
+      width: 100%;
+      padding: 12px;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.75);
+      color: var(--text);
+      outline: none;
+      box-shadow: var(--shadow-sm);
+    }
+
+    [data-theme="dark"] .field input,
+    [data-theme="dark"] .field select,
+    [data-theme="dark"] .field textarea {
+      background: rgba(2, 6, 23, 0.45);
+    }
+
+    .field input:focus,
+    .field select:focus,
+    .field textarea:focus {
+      border-color: rgba(16, 185, 129, 0.55);
+    }
+
+    .list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .item {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 12px;
+      box-shadow: var(--shadow-sm);
+      display: grid;
+      gap: 10px;
+    }
+
+    .item-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .item-top strong {
+      font-weight: 900;
+    }
+
+    .item-top span {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .item-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .toast-wrap {
+      position: fixed;
+      top: 16px;
+      right: 16px;
+      display: grid;
+      gap: 10px;
+      z-index: 9999;
+    }
+
+    .toast {
+      background: rgba(15, 23, 42, 0.92);
+      color: white;
+      border-radius: 16px;
+      padding: 12px 14px;
+      min-width: 260px;
+      box-shadow: var(--shadow-lg);
+      border: 1px solid rgba(255, 255, 255, 0.10);
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+    }
+
+    .toast i {
+      margin-top: 2px;
+    }
+
+    .toast .t {
+      display: grid;
+      gap: 3px;
+    }
+
+    .toast .t strong {
+      font-size: 13px;
+    }
+
+    .toast .t span {
+      opacity: 0.9;
+      font-size: 12px;
+    }
+
+    @media (max-width: 1100px) {
+      .grid.cols-4 {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 860px) {
+      .app {
+        grid-template-columns: 1fr;
+      }
+
+      .sidebar {
+        position: fixed;
+        inset: 0 auto 0 0;
+        width: min(340px, 92vw);
+        transform: translateX(-110%);
+        transition: transform var(--transition);
+        z-index: 60;
+        border-right: 1px solid var(--border);
+      }
+
+      .sidebar.open {
+        transform: translateX(0);
+      }
+
+      .split {
+        grid-template-columns: 1fr;
+      }
+
+      .icon-btn-sync {
+        height: 48px;
+        width: 48px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid var(--border);
+        background: var(--panel-solid);
+        border-radius: var(--radius-sm);
+        cursor: pointer;
+        transition: var(--transition);
+        color: var(--primary);
+      }
+
+      .icon-btn-sync:hover {
+        background: var(--primary);
+        color: #fff;
+        transform: translateY(-2px);
+      }
+
+      .otp-container input {
+        width: 100%;
+        padding: 0.875rem 1rem;
+        border: 2px solid var(--border);
+        border-radius: var(--radius-sm);
+        font-size: 1rem;
+        background: var(--panel-solid);
+        color: var(--text);
+        transition: var(--transition);
+      }
+
+      .grid.cols-2 {
+        grid-template-columns: 1fr;
+      }
+
+      .grid.wide-right {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Utility classes for inline style replacement */
+    .error-banner-container {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .error-banner-content {
+      display: grid;
+      gap: 4px;
+    }
+
+    .error-text {
+      font-weight: 700;
+      opacity: 0.95;
+      font-size: 12px;
+      white-space: pre-wrap;
+    }
+
+    .error-banner-close-btn {
+      cursor: pointer;
+      opacity: 0.7;
+      transition: opacity 0.2s;
+    }
+
+    .profile-relative {
+      position: relative;
+    }
+
+    .avatar-relative {
+      position: relative;
+    }
+
+    .avatar-hidden {
+      display: none;
+    }
+
+    .profile-photo-icon {
+      font-size: 0.7rem;
+    }
+
+    .progress-margin {
+      margin-top: 12px;
+    }
+
+    .progress-bar-container {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .countdown-hint {
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .dashboard-buttons {
+      margin-top: 12px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .dashboard-meta {
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .item-actions-margin {
+      margin-top: 12px;
+    }
+
+    .card-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .receipt-content {
+      display: grid;
+      gap: 4px;
+    }
+
+    .receipt-meta {
+      display: grid;
+      gap: 6px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .detail-content {
+      display: grid;
+      gap: 4px;
+    }
+
+    .detail-meta {
+      display: grid;
+      gap: 6px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .history-list-margin {
+      margin-top: 12px;
+    }
+
+    .action-buttons {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .video-background {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      opacity: 0.15;
+      z-index: 0;
+    }
+
+    .section-title {
+      color: var(--primary);
+      margin-bottom: 1.5rem;
+    }
+
+    .lease-item {
+      margin-bottom: 1rem;
+      padding: 1.5rem;
+    }
+
+    .lease-subsection {
+      color: var(--secondary);
+      margin-bottom: 1rem;
+    }
+
+    .lease-paragraph {
+      line-height: 1.8;
+    }
+
+    .lease-indent {
+      margin-left: 2rem;
+      margin-top: 1rem;
+    }
+
+    .lease-subparagraph {
+      margin-bottom: 0.5rem;
+    }
+
+    .status-paid {
+      color: var(--success);
+      font-weight: 600;
+    }
+
+    .status-pending {
+      color: var(--warning);
+      font-weight: 600;
+    }
+
+    .status-late {
+      color: var(--danger);
+      font-weight: 600;
+    }
+
+    .text-primary {
+      color: var(--primary);
+    }
+
+    .text-secondary {
+      color: var(--secondary);
+    }
+
+    .text-success {
+      color: var(--success);
+    }
+
+    .text-warning {
+      color: var(--warning);
+    }
+
+    .text-danger {
+      color: var(--danger);
+    }
+
+    .build-info {
+      margin-top: 6px;
+      color: var(--muted);
+      font-weight: 900;
+      font-size: 12px;
+    }
+
+    .history-list {
+      margin-top: 12px;
+    }
+
+    .img-preview {
+      width: 100%;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+    }
+
+    .otp-status-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 0.5rem;
+    }
+
+    .otp-timer {
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+
+    .otp-status {
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+
+    .lease-footer {
+      text-align: center;
+      font-weight: 600;
+      color: var(--primary);
+      margin-top: 2rem;
+    }
+
+    .error-banner-main {
+      display: none;
+      position: fixed;
+      left: 16px;
+      right: 16px;
+      bottom: 16px;
+      z-index: 10000;
+      background: rgba(220, 38, 38, 0.95);
+      color: #fff;
+      padding: 12px 14px;
+      border-radius: 16px;
+      box-shadow: var(--shadow-lg);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      font-weight: 800;
+    }
+
+    .error-banner-btn {
+      background: rgba(255, 255, 255, 0.15);
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      color: #fff;
+    }
+
+    .upload-badge-link {
+      position: absolute;
+      bottom: -5px;
+      right: -5px;
+      background: var(--primary);
+      color: white;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      border: 2px solid white;
+      transition: 0.3s;
+    }
+
+    #jsErrorBanner {
+      display: none;
+      position: fixed;
+      left: 16px;
+      right: 16px;
+      bottom: 16px;
+      z-index: 10000;
+      background: rgba(220, 38, 38, 0.95);
+      color: #fff;
+      padding: 12px 14px;
+      border-radius: 16px;
+      box-shadow: var(--shadow-lg);
+      border: 1px solid rgba(255,255,255,0.18);
+      font-weight: 800;
+    }
+
+    #btnHideJsError {
+      background: rgba(255,255,255,0.15);
+      border: 1px solid rgba(255,255,255,0.25);
+      color: #fff;
+    }
+
+    .nav-btn-chat {
+      margin-top: 10px;
+      background: rgba(99, 102, 241, 0.1);
+    }
+
+    .logout-btn {
+      margin-top: 10px;
+      background: rgba(239, 68, 68, 0.1);
+      display: none;
+    }
+
+    .card-meta strong {
+      font-size: 13px;
+    }
+
+    .owner-details-container {
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+      display: grid;
+      gap: 6px;
+    }
+
+    .tenant-generate-btn {
+      width: 100%;
+      background: rgba(16, 185, 129, 0.1);
+      color: var(--primary);
+      border: 1px solid var(--primary);
+    }
+
+    .tenant-otp-input {
+      letter-spacing: 4px;
+      font-weight: 700;
+      text-align: center;
+    }
+
+    .text-primary {
+      color: var(--primary);
+    }
+
+    .text-secondary {
+      color: var(--secondary);
+    }
+
+    .text-success {
+      color: #10b981;
+    }
+
+    .text-warning {
+      color: #f59e0b;
+    }
+
+    .text-danger {
+      color: var(--danger);
+    }
+
+    .otp-timer-container {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 0.5rem;
+    }
+  </style>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      if (typeof io !== 'undefined') {
+        const socket = io();
+        socket.on('notification', (data) => {
+          if (typeof toast === 'function') {
+            toast(data.title, data.message, 'info');
+          } else {
+            console.log('Notification Received:', data);
+          }
+        });
+      }
+    });
+  </script>
+</head>
+
+<body>
+  <div id="jsErrorBanner">
+    <div class="error-banner-container">
+      <div class="error-banner-content">
+        <div>JavaScript Error (app may not respond)</div>
+        <div id="jsErrorText" class="error-text"></div>
+      </div>
+      <button class="btn" type="button" id="btnHideJsError">Hide</button>
+    </div>
+  </div>
+
+  <!-- Video Background -->
+  <video autoplay loop muted playsinline
+    class="video-background">
+    <source src="Video/motion2Fast_Dynamic_AI_animation_showcasing_houses_rental_tran_0.mp4" type="video/mp4">
+  </video>
+
+  <div class="toast-wrap" id="toastWrap"></div>
+
+  <div class="app" id="app">
+    <aside class="sidebar" id="sidebar">
+      <div class="brand">
+        <div class="brand-left">
+          <div class="brand-badge"><i class="fas fa-home"></i></div>
+          <div class="brand-title">
+            <strong class="rentiva-heading">RENTIVA.ai</strong>
+            <span>Tenant Portal</span>
+          </div>
+        </div>
+        <button class="icon-btn" id="btnCloseSidebar" type="button" aria-label="Close menu"><i
+            class="fas fa-times"></i></button>
+      </div>
+
+      <div class="profile profile-relative">
+        <div class="avatar avatar-relative" id="avatar">
+          <span id="avatarText">T</span>
+          <img id="avatarImg" alt="Profile" class="avatar-hidden" />
+          <label for="profile-upload-tenant" class="upload-badge-link" title="Upload Photo">
+            <i class="fas fa-camera profile-photo-icon"></i>
+          </label>
+          <input type="file" id="profile-upload-tenant" hidden accept="image/*" onchange="handleImageUpload(event)">
+        </div>
+
+        <div class="profile-meta">
+          <div class="profile-row">
+            <div class="profile-name" id="profileName">Tenant</div>
+            <div class="pill" id="rentStatusPill">PENDING</div>
+          </div>
+          <div class="profile-sub" id="profileSub">Unit • Due day</div>
+        </div>
+      </div>
+
+      <div class="nav" id="nav">
+        <button class="nav-btn active" data-view="dashboard" type="button">
+          <div class="nav-left"><i class="fas fa-gauge"></i>
+            <div class="nav-title"><strong>Dashboard</strong><span>Your rent at a glance</span></div>
+          </div><span class="badge" id="badgeCountdown">--</span>
+        </button>
+        <button class="nav-btn" data-view="pay" type="button">
+          <div class="nav-left"><i class="fas fa-indian-rupee-sign"></i>
+            <div class="nav-title"><strong>Pay Owner</strong><span>Full or partial</span></div>
+          </div><span class="badge" id="badgeDue">₹0</span>
+        </button>
+        <button class="nav-btn" data-view="history" type="button">
+          <div class="nav-left"><i class="fas fa-clock-rotate-left"></i>
+            <div class="nav-title"><strong>Payment History</strong><span>Receipts & trust</span></div>
+          </div><span class="badge" id="badgeHistory">0</span>
+        </button>
+        <button class="nav-btn" data-view="notifications" type="button">
+          <div class="nav-left"><i class="fas fa-bell"></i>
+            <div class="nav-title"><strong>Notifications</strong><span>Reminders</span></div>
+          </div><span class="badge" id="badgeNotif">0</span>
+        </button>
+        <button class="nav-btn" data-view="maintenance" type="button">
+          <div class="nav-left"><i class="fas fa-screwdriver-wrench"></i>
+            <div class="nav-title"><strong>Maintenance</strong><span>Raise issues</span></div>
+          </div><span class="badge" id="badgeMaint">0</span>
+        </button>
+        <button class="nav-btn" data-view="expenses" type="button">
+          <div class="nav-left"><i class="fas fa-chart-pie"></i>
+            <div class="nav-title"><strong>Expenses</strong><span>Utilities</span></div>
+          </div><span class="badge" id="badgeExp">₹0</span>
+        </button>
+        <button class="nav-btn" data-view="settings" type="button">
+          <div class="nav-left"><i class="fas fa-gear"></i>
+            <div class="nav-title"><strong>Profile & Settings</strong><span>Customize</span></div>
+          </div><span class="badge">UI</span>
+        </button>
+        <button class="nav-btn" data-view="terms" type="button">
+          <div class="nav-left"><i class="fas fa-file-contract"></i>
+            <div class="nav-title"><strong>Terms & Conditions</strong><span>Rental Agreement</span></div>
+          </div>
+        </button>
+        <button class="nav-btn nav-btn-chat" onclick="window.location.href='chat.html'" type="button">
+          <div class="nav-left"><i class="fas fa-comments text-indigo-500"></i>
+            <div class="nav-title"><strong>Rentiva Chat</strong><span>AI Interface</span></div>
+          </div>
+        </button>
+        <button class="nav-btn logout-btn" id="signout-btn" onclick="signOut()" type="button">
+          <div class="nav-left"><i class="fas fa-sign-out-alt text-red-500"></i>
+            <div class="nav-title"><strong>Sign Out</strong><span>See you soon</span></div>
+          </div>
+        </button>
+      </div>
+
+      <div class="sidebar-footer">
+        <div id="syncHint">Sync: ready</div>
+        <div>Everything is stored locally in your browser.</div>
+        <div class="build-info">Build: <span
+            id="buildId">--</span></div>
+      </div>
+    </aside>
+
+    <div class="main">
+      <header class="topbar">
+        <div class="topbar-left">
+          <button class="icon-btn" id="btnOpenSidebar" type="button" aria-label="Open menu"><i
+              class="fas fa-bars"></i></button>
+          <div class="page-title">
+            <strong id="pageTitle">Dashboard</strong>
+            <span id="pageSubtitle">Your rent, receipts and requests — all in one place</span>
+          </div>
+        </div>
+        <div class="topbar-actions">
+          <button class="icon-btn" id="btnTheme" type="button" aria-label="Toggle theme"><i class="fas fa-moon"
+              id="themeIcon"></i></button>
+          <button class="btn danger" id="btnLogout" type="button"><i class="fas fa-sign-out-alt"></i> Logout</button>
+        </div>
+      </header>
+
+      <main class="content">
+        <section class="view active" id="view-dashboard">
+          <div class="grid cols-4">
+            <div class="card">
+              <div class="card-header">
+                <div class="card-title"><strong>Monthly Rent</strong><span>Agreement amount</span></div><span
+                  class="badge" id="dashMonth">--</span>
+              </div>
+              <div class="metric">
+                <div class="value" id="dashRent">₹0</div>
+                <div class="hint">auto</div>
+              </div>
+              <div class="progress" class="progress-margin">
+                <div id="dashPaidProgress"></div>
+              </div>
+              <div
+                class="progress-bar-container">
+                <span id="dashPaidLabel">Paid ₹0</span><span id="dashDueLabel">Due ₹0</span>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-header">
+                <div class="card-title"><strong>Due Countdown</strong><span>Live timer</span></div><span class="badge"
+                  id="dashStatus">--</span>
+              </div>
+              <div class="metric">
+                <div class="value" id="dashCountdown">--</div>
+                <div class="hint" id="dashDueDate">--</div>
+              </div>
+              <div class="progress" class="progress-margin">
+                <div id="dashCountdownProgress"></div>
+              </div>
+              <div class="countdown-hint" id="dashCountdownHint">
+                --</div>
+            </div>
+            <div class="card">
+              <div class="card-header">
+                <div class="card-title"><strong>Total Paid</strong><span>All-time</span></div><span
+                  class="badge success">TRUST</span>
+              </div>
+              <div class="metric">
+                <div class="value" id="dashTotalPaid">₹0</div>
+                <div class="hint">till date</div>
+              </div>
+              <div class="dashboard-buttons"><button class="btn" type="button"
+                  id="btnOpenHistory"><i class="fas fa-receipt"></i> Receipts</button><button class="btn primary"
+                  type="button" id="btnOpenPay"><i class="fas fa-bolt"></i> Quick Pay</button></div>
+            </div>
+            <div class="card">
+              <div class="card-header">
+                <div class="card-title"><strong>Recent Payment</strong><span>Latest</span></div><span class="badge"
+                  id="dashRecentBadge">--</span>
+              </div>
+              <div class="metric">
+                <div class="value" id="dashRecentAmount">₹0</div>
+                <div class="hint" id="dashRecentDate">--</div>
+              </div>
+              <div class="countdown-hint" id="dashRecentMeta">--
+              </div>
+              <div class="item-actions item-actions-margin"><button class="btn" type="button"
+                  id="btnDownloadRecent"><i class="fas fa-download"></i> Receipt</button></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="view" id="view-pay">
+          <div class="grid cols-2 wide-right">
+            <div class="card">
+              <div class="card-header">
+                <div class="card-title"><strong>Pay Owner</strong><span>Full or partial rent</span></div><span
+                  class="badge" id="payStatus">--</span>
+              </div>
+              <div class="grid cols-2">
+                <div class="card"
+                  class="card-meta">
+                  <div class="card-meta"><strong>Rent</strong><span class="badge" id="payRent">₹0</span></div>
+                  <div class="countdown-hint" id="payDueInfo">
+                    Due: --</div>
+                </div>
+                <div class="card"
+                  class="card-meta">
+                  <div class="card-meta"><strong>Balance</strong><span class="badge warn" id="payBalance">₹0</span></div>
+                  <div class="countdown-hint" id="payMonthKey">--
+                  </div>
+                </div>
+              </div>
+              <form class="form" id="payForm" class="progress-margin">
+                <div class="split">
+                  <div class="field"><label>Amount (₹)</label><input id="payAmount" inputmode="decimal"
+                      placeholder="Enter amount" autocomplete="off" /></div>
+                  <div class="field"><label>Method</label><select id="payMethod">
+                      <option value="UPI">UPI</option>
+                      <option value="Bank">Bank Transfer</option>
+                      <option value="Cash">Cash</option>
+                      <option value="Other">Other</option>
+                    </select></div>
+                </div>
+                <div class="field"><label>Note (optional)</label><input id="payNote" placeholder="Optional note"
+                    autocomplete="off" /></div>
+                <div class="dashboard-buttons"><button class="btn primary" type="submit"><i
+                      class="fas fa-lock"></i> Pay & Generate Receipt</button><button class="btn" type="button"
+                    id="btnPrefillBalance"><i class="fas fa-wand-magic-sparkles"></i> Fill Due</button></div>
+              </form>
+            </div>
+            <div class="card">
+              <div class="card-header">
+                <div class="card-title"><strong>Receipt</strong><span>Download after payment</span></div><span
+                  class="badge" id="receiptBadge">--</span>
+              </div>
+              <div class="item" id="receiptCard">
+                <div class="item-top">
+                  <div class="receipt-content"><strong id="receiptTitle">No receipt yet</strong><span
+                      id="receiptSubtitle">Make a payment to generate a receipt</span></div><span class="badge"
+                    id="receiptStatus">--</span>
+                </div>
+                <div class="receipt-meta">
+                  <div id="receiptLine1">--</div>
+                  <div id="receiptLine2">--</div>
+                  <div id="receiptLine3">--</div>
+                </div>
+                <div class="item-actions"><button class="btn" type="button" id="btnDownloadReceipt"><i
+                      class="fas fa-download"></i> Download</button><button class="btn" type="button"
+                    id="btnOpenHistory2"><i class="fas fa-clock-rotate-left"></i> History</button></div>
+              </div>
+              <div class="card"
+                class="card card-meta">
+                <div class="card-meta"><strong>Owner Details</strong><span class="badge">UPI</span></div>
+                <div class="owner-details-container">
+                  <div id="ownerPayName">Owner: --</div>
+                  <div id="ownerPayUpi">UPI: --</div>
+                  <div id="ownerPayNote">Note: --</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="view" id="view-history">
+          <div class="grid cols-2 wide-right">
+            <div class="card">
+              <div class="card-header">
+                <div class="card-title"><strong>Details</strong><span>Receipt and metadata</span></div><span
+                  class="badge" id="detailBadge">--</span>
+              </div>
+              <div class="item" id="detailCard">
+                <div class="item-top">
+                  <div class="receipt-content"><strong id="detailTitle">Select a payment</strong><span
+                      id="detailSubtitle">Click an entry</span></div><span class="badge" id="detailStatus">--</span>
+                </div>
+                <div class="receipt-meta">
+                  <div id="detailLine1">--</div>
+                  <div id="detailLine2">--</div>
+                  <div id="detailLine3">--</div>
+                </div>
+                <div class="item-actions"><button class="btn" type="button" id="btnDownloadDetail"><i
+                      class="fas fa-download"></i> Download</button><button class="btn danger" type="button"
+                    id="btnDeletePayment"><i class="fas fa-trash"></i> Delete</button></div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-header">
+                <div class="card-title"><strong>Payment History</strong><span>All transactions</span></div><span
+                  class="badge" id="historyCount">0</span>
+              </div>
+              <div class="split">
+                <div class="field"><label>Filter</label><select id="historyFilter">
+                    <option value="all">All</option>
+                    <option value="paid">Paid</option>
+                    <option value="pending">Pending</option>
+                  </select></div>
+                <div class="field"><label>Search</label><input id="historySearch"
+                    placeholder="Search by month or method" autocomplete="off" /></div>
+              </div>
+              <div class="list" id="historyList" class="progress-margin"></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="view" id="view-notifications">
+          <div class="grid cols-2 wide-right">
+            <div class="card">
+              <div class="card-header">
+                <div class="card-title"><strong>Reminder Settings</strong><span>Customizable</span></div><span
+                  class="badge" id="notifCount">0</span>
+              </div>
+              <div class="form">
+                <div class="split">
+                  <div class="field"><label>Reminders</label><select id="toggleReminders">
+                      <option value="on">On</option>
+                      <option value="off">Off</option>
+                    </select></div>
+                  <div class="field"><label>Due Alerts</label><select id="toggleDueAlerts">
+                      <option value="on">On</option>
+                      <option value="off">Off</option>
+                    </select></div>
+                </div>
+                <div class="split">
+                  <div class="field"><label>Confirmations</label><select id="toggleConfirmAlerts">
+                      <option value="on">On</option>
+                      <option value="off">Off</option>
+                    </select></div>
+                  <div class="field"><label>Quiet Hours</label><select id="quietHours">
+                      <option value="none">None</option>
+                      <option value="22-8">10pm - 8am</option>
+                      <option value="23-9">11pm - 9am</option>
+                    </select></div>
+                </div>
+                <div class="dashboard-buttons"><button class="btn" type="button"
+                    id="btnTestNotif"><i class="fas fa-bell"></i> Test</button><button class="btn" type="button"
+                    id="btnClearNotifs"><i class="fas fa-eraser"></i> Clear All</button></div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-header">
+                <div class="card-title"><strong>Feed</strong><span>Updates</span></div><span class="badge"
+                  id="notifUnread">0</span>
+              </div>
+              <div class="list" id="notifList"></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="view" id="view-maintenance">
+          <div class="grid cols-2 wide-right">
+            <div class="card">
+              <div class="card-header">
+                <div class="card-title"><strong>Raise Request</strong><span>Plumbing, electrical, general</span></div>
+                <span class="badge" id="maintCount">0</span>
+              </div>
+              <form class="form" id="maintForm">
+                <div class="split">
+                  <div class="field"><label>Category</label><select id="maintCategory">
+                      <option value="Plumbing">Plumbing</option>
+                      <option value="Electrical">Electrical</option>
+                      <option value="General">General</option>
+                      <option value="Internet">Internet</option>
+                    </select></div>
+                  <div class="field"><label>Priority</label><select id="maintPriority">
+                      <option value="Normal">Normal</option>
+                      <option value="High">High</option>
+                      <option value="Urgent">Urgent</option>
+                    </select></div>
+                </div>
+                <div class="field"><label>Description</label><textarea id="maintDesc" rows="4"
+                    placeholder="Describe the issue clearly..."></textarea></div>
+                <div class="field"><label>Image (optional)</label><input id="maintImage" type="file" accept="image/*" />
+                </div>
+                <div class="item" id="maintImagePreview" class="avatar-hidden">
+                  <div class="item-top">
+                    <div class="receipt-content"><strong>Image Preview</strong><span>Attached</span></div><span
+                      class="badge">OK</span>
+                  </div><img id="maintPreviewImg" alt="Preview"
+                    class="img-preview" />
+                </div>
+                <button class="btn primary" type="submit"><i class="fas fa-paper-plane"></i> Submit</button>
+              </form>
+            </div>
+            <div class="card">
+              <div class="card-header">
+                <div class="card-title"><strong>Tracker</strong><span>Status updates</span></div><span class="badge"
+                  id="maintOpen">0</span>
+              </div>
+              <div class="list" id="maintList"></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="view" id="view-expenses">
+          <div class="grid cols-2 wide-right">
+            <div class="card">
+              <div class="card-header">
+                <div class="card-title"><strong>Expense Tracker</strong><span>Utilities & charges</span></div><span
+                  class="badge" id="expMonth">--</span>
+              </div>
+              <form class="form" id="expenseForm">
+                <div class="split">
+                  <div class="field"><label>Category</label><select id="expCategory">
+                      <option value="Electricity">Electricity</option>
+                      <option value="Water">Water</option>
+                      <option value="Internet">Internet</option>
+                      <option value="Maintenance">Maintenance Charges</option>
+                      <option value="Other">Other</option>
+                    </select></div>
+                  <div class="field"><label>Amount (₹)</label><input id="expAmount" inputmode="decimal"
+                      placeholder="Enter amount" autocomplete="off" /></div>
+                </div>
+                <div class="split">
+                  <div class="field"><label>Date</label><input id="expDate" type="date" /></div>
+                  <div class="field"><label>Note</label><input id="expNote" placeholder="Optional" autocomplete="off" />
+                  </div>
+                </div>
+                <button class="btn primary" type="submit"><i class="fas fa-plus"></i> Add</button>
+              </form>
+              <div class="card"
+                class="card card-meta">
+                <div class="card-meta"><strong>Monthly Total</strong><span class="badge" id="expTotal">₹0</span></div>
+                <div class="countdown-hint" id="expSummaryHint">
+                  --</div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-header">
+                <div class="card-title"><strong>Records</strong><span>Card timeline</span></div><span class="badge"
+                  id="expCount">0</span>
+              </div>
+              <div class="list" id="expenseList"></div>
+              <div class="list" id="expenseBreakdown" class="progress-margin"></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="view" id="view-settings">
+          <div class="grid cols-2">
+            <div class="card">
+              <div class="card-header">
+                <div class="card-title"><strong>Profile</strong><span>Your details</span></div><span
+                  class="badge">EDIT</span>
+              </div>
+              <form class="form" id="profileForm">
+                <div class="split">
+                  <div class="field"><label>Name</label><input id="setName" placeholder="e.g., Priya"
+                      autocomplete="off" /></div>
+                  <div class="field"><label>Unit</label><input id="setUnit" placeholder="e.g., A-203"
+                      autocomplete="off" /></div>
+                </div>
+                <div class="split">
+                  <div class="field"><label>Monthly Rent (₹)</label><input id="setRent" inputmode="decimal"
+                      placeholder="e.g., 12000" autocomplete="off" /></div>
+                  <div class="field"><label>Due Day (1-28)</label><input id="setDueDay" inputmode="numeric"
+                      placeholder="e.g., 5" autocomplete="off" /></div>
+                </div>
+                <div class="field"><label>Photo</label><input id="setPhoto" type="file" accept="image/*" /></div>
+
+                <div class="field">
+                  <label>Phone Number</label>
+                  <div class="phone-input-group">
+                    <div class="phone-input-wrapper">
+                      <input type="tel" id="tenantPhone" placeholder="+91 98765 43210" autocomplete="off" />
+                    </div>
+                    <button type="button" class="icon-btn-sync" onclick="syncContacts('tenantPhone')"
+                      title="Sync Contacts">
+                      <i class="fas fa-address-book"></i>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- OTP Section -->
+                <div class="field" id="tenant-otp-section" class="countdown-hint">
+                  <label>OTP Verification</label>
+                  <div class="otp-container" class="otp-container">
+                    <button type="button" id="tenant-generate-btn" class="btn tenant-generate-btn" onclick="generateOTP('tenant')">
+                      Generate OTP
+                    </button>
+                    <div id="tenant-otp-input-group" class="avatar-hidden">
+                      <div class="otp-input-wrapper">
+                        <input type="text" id="tenant-otp-input" placeholder="Enter 6-digit OTP" maxlength="6" class="tenant-otp-input" />
+                      </div>
+                      <div class="otp-timer-container">
+                        <span id="tenant-timer" class="otp-timer">00:00</span>
+                        <span id="tenant-otp-status" class="otp-status"></span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <button class="btn primary" type="submit"><i class="fas fa-save"></i> Save</button>
+              </form>
+            </div>
+            <div class="card">
+              <div class="card-header">
+                <div class="card-title"><strong>Owner Details</strong><span>For quick transfers</span></div><span
+                  class="badge">PAY</span>
+              </div>
+              <form class="form" id="ownerForm">
+                <div class="split">
+                  <div class="field"><label>Owner Name</label><input id="setOwnerName" placeholder="Property Owner"
+                      autocomplete="off" /></div>
+                  <div class="field"><label>UPI</label><input id="setOwnerUpi" placeholder="owner@upi"
+                      autocomplete="off" /></div>
+                </div>
+                <div class="field"><label>Transfer Note</label><input id="setOwnerNote" placeholder="Rent payment"
+                    autocomplete="off" /></div>
+                <div class="dashboard-buttons"><button class="btn primary" type="submit"><i
+                      class="fas fa-save"></i> Save</button><button class="btn" type="button" id="btnSyncOwner"><i
+                      class="fas fa-rotate"></i> Sync from Owner</button></div>
+              </form>
+              <div class="card"
+                class="card card-meta">
+                <div class="card-meta"><strong>Data</strong><span class="badge danger">RESET</span></div>
+                <div class="dashboard-buttons"><button class="btn danger"
+                    type="button" id="btnResetAll"><i class="fas fa-trash"></i> Reset</button></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="view" id="view-terms">
+          <h1>📋 Terms & Conditions</h1>
+
+          <div class="grid cols-1">
+            <div class="card">
+              <h3 class="section-title"><i class="fas fa-file-contract"></i> Rental
+                Agreement Terms</h3>
+
+              <div class="item" class="item">
+                <h4 class="lease-subsection">📈 Rent Increase Policy</h4>
+                <p class="lease-paragraph">
+                  <strong class="text-primary">Annual Rent Increase:</strong> Rent may increase by <strong class="text-danger">15% yearly</strong> based on market conditions and property
+                  maintenance costs.
+                  Tenants will be notified at least <strong class="text-success">60 days</strong> before any
+                  rent increase takes effect.
+                </p>
+              </div>
+
+              <div class="item" class="item">
+                <h4 class="lease-subsection">⏰ Payment Timelines & Status</h4>
+                <p class="lease-paragraph">
+                  <strong class="text-primary">Due Date:</strong> Rent is due on the <strong class="text-danger">1st day of each month</strong>.
+                  Payment status is automatically updated based on payment dates:
+                </p>
+                <div class="lease-indent">
+                  <p class="lease-subparagraph">
+                    <span class="status-paid">✓ PAID:</span> If rent is paid on or before
+                    1st of the month
+                  </p>
+                  <p class="lease-subparagraph">
+                    <span class="status-pending">⚠ PENDING:</span> If rent is unpaid for 1-2
+                    days after due date
+                  </p>
+                  <p class="lease-subparagraph">
+                    <span class="status-late">✗ LATE:</span> If rent is unpaid for 3 or more
+                    days after due date
+                  </p>
+                </div>
+                <p class="lease-paragraph">
+                  <strong class="text-warning">Late payments</strong> may incur additional charges. Tenants
+                  should maintain timely payments to avoid late fees.
+                </p>
+              </div>
+
+              <div class="item" class="item">
+                <h4 class="lease-subsection">🏠 Property Maintenance</h4>
+                <p class="lease-paragraph">
+                  <strong class="text-primary">Maintenance Responsibility:</strong> Property owner is
+                  responsible for major repairs and structural maintenance.
+                  Tenants are responsible for keeping the property clean and reporting any issues promptly.
+                </p>
+              </div>
+
+              <div class="item" class="item">
+                <h4 class="lease-subsection">💰 Utility Payments</h4>
+                <p class="lease-paragraph">
+                  <strong class="text-primary">Electricity & Water:</strong> Tenants are responsible for
+                  electricity and water consumption charges based on actual usage.
+                </p>
+              </div>
+
+              <div class="item" class="item">
+                <h4 class="lease-subsection">📝 Termination Policy</h4>
+                <p class="lease-paragraph">
+                  <strong class="text-primary">Notice Period:</strong> <strong
+                    class="text-warning">30 days written notice</strong> is required for lease termination.
+                  Security deposit will be returned within <strong class="text-success">15 days</strong> of
+                  vacating, subject to inspection.
+                </p>
+              </div>
+
+              <div class="lease-footer">
+                <i class="fas fa-info-circle"></i> This agreement is legally binding and subject to local rental laws.
+              </div>
+            </div>
+          </div>
+        </section>
+
+      </main>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+  <script src="tenant-core.js"></script>
+  <script src="chat-widget.js"></script>
+  <script src="majestic-theme.js"></script>
+  <script src="tenant-features.js"></script>
+
+</body>
+
+</html>

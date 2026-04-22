@@ -1,0 +1,6044 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RENTIVA.ai - Professional Rent Management System</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="rentiva-gradient.css">
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged, signOut, GoogleAuthProvider } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-auth.js";
+    import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-firestore.js";
+    const firebaseConfig = {
+      apiKey: "AIzaSyCG8oXE_17nrbzKZ2v68aEhNYkhrGyiPjU",
+      authDomain: "rentiva-ai.firebaseapp.com",
+      projectId: "rentiva-ai",
+      storageBucket: "rentiva-ai.firebasestorage.app",
+      messagingSenderId: "72917717553",
+      appId: "1:72917717553:web:c4c163e171b5c73a733b10",
+      measurementId: "G-1PT2RQW0QF"
+    };
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    window.db = db; // Expose for other scripts
+    window.auth = auth;
+    const provider = new GoogleAuthProvider();
+    provider.setCustomParameters({
+      prompt: 'select_account'
+    });
+    onAuthStateChanged(auth, (user) => {
+      if (!user) {
+        window.location.href = 'landing.html';
+      } else {
+        const userNameElem = document.getElementById('user-name');
+        const profileImgElem = document.getElementById('profile-img');
+        const signoutBtn = document.getElementById('signout-btn');
+        const loginBtn = document.querySelector('button[onclick="openAuthModal()"]');
+
+        if (userNameElem) userNameElem.textContent = user.displayName || user.email.split('@')[0];
+        if (profileImgElem) {
+          const savedImg = localStorage.getItem(`profile_img_${user.uid}`);
+          profileImgElem.src = savedImg || user.photoURL || "https://picsum.photos/seed/user123/100/100.jpg";
+        }
+        if (signoutBtn) signoutBtn.style.display = 'flex';
+        if (loginBtn) loginBtn.style.display = 'none';
+      }
+    });
+
+    window.handleImageUpload = (event) => {
+      const file = event.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const profileImg = document.getElementById('profile-img');
+          if (profileImg) profileImg.src = e.target.result;
+          if (auth.currentUser) {
+            localStorage.setItem(`profile_img_${auth.currentUser.uid}`, e.target.result);
+            showNotification("Profile image updated successfully!", "success");
+          }
+        };
+        reader.readAsDataURL(file);
+      }
+    };
+
+
+    window.signOutUserAction = async () => {
+      try {
+        await signOut(auth);
+        window.location.href = 'landing.html';
+      } catch (error) {
+        console.error("Error signing out:", error);
+      }
+    };
+    window.handleGoogleAuth = async (userType) => {
+      try {
+        const result = await (await import("https://www.gstatic.com/firebasejs/11.1.0/firebase-auth.js")).signInWithPopup(auth, provider);
+        showNotification(`Successfully authenticated with Google as ${result.user.displayName}!`, 'success');
+        closeAuthModal();
+      } catch (error) {
+        showNotification(error.message, 'error');
+      }
+    };
+    window.handleLogin = async (event, userType) => {
+      event.preventDefault();
+      const form = event.target;
+      const email = form.querySelector('input[type="email"]').value;
+      const password = form.querySelector('input[type="password"]').value;
+      try {
+        const { signInWithEmailAndPassword } = await import("https://www.gstatic.com/firebasejs/11.1.0/firebase-auth.js");
+        await signInWithEmailAndPassword(auth, email, password);
+        showNotification("Successfully signed in!", "success");
+        closeAuthModal();
+      } catch (error) {
+        showNotification(error.message, "error");
+      }
+    };
+    window.handleSignup = async (event, userType) => {
+      event.preventDefault();
+      const form = event.target;
+      const name = form.querySelector('input[placeholder="John Doe"]').value;
+      const email = form.querySelector('input[type="email"]').value;
+      const password = form.querySelector('input[type="password"]').value;
+      if (window.generatedOTPs[userType] && window.generatedOTPs[userType].verified) {
+        try {
+          const { createUserWithEmailAndPassword } = await import("https://www.gstatic.com/firebasejs/11.1.0/firebase-auth.js");
+          await createUserWithEmailAndPassword(auth, email, password);
+          showNotification(`Welcome, ${name}! Account created.`, "success");
+          closeAuthModal();
+        } catch (error) {
+          showNotification(error.message, "error");
+        }
+      } else {
+        showNotification("Please verify your phone number with OTP first.", "error");
+      }
+    };
+    window.sendMessageToChat = async (text) => {
+      if (!auth.currentUser) {
+        if (typeof showNotification === 'function') {
+          showNotification("Please sign in to send messages.", "error");
+        } else {
+          alert("Please sign in to send messages.");
+        }
+        return;
+      }
+      try {
+        await addDoc(collection(db, 'messages'), {
+          text: text,
+          senderId: auth.currentUser.uid,
+          senderName: auth.currentUser.displayName || auth.currentUser.email.split('@')[0],
+          senderRole: 'Owner',
+          timestamp: serverTimestamp()
+        });
+        if (typeof showNotification === 'function') {
+          showNotification("Message sent to tenant!", "success");
+        } else {
+          alert("Message sent to tenant!");
+        }
+      } catch (error) {
+        console.error("Error sending message:", error);
+        if (typeof showNotification === 'function') {
+          showNotification("Failed to send message.", "error");
+        } else {
+          alert("Failed to send message.");
+        }
+      }
+    };
+
+  </script>
+
+  <style>
+    :root {
+      --primary: #ec4899;
+      --primary-dark: #db2777;
+      --secondary: #a855f7;
+      --accent: #f472b6;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --dark: #1f2937;
+      --light: #793259;
+      --gradient: linear-gradient(135deg, #ec4899 0%, #a855f7 50%, #6366f1 100%);
+      --gradient-2: linear-gradient(135deg, #f472b6 0%, #ec4899 100%);
+      --gradient-3: linear-gradient(135deg, #f9a8d4 0%, #c084fc 100%);
+      --shadow-sm: 0 1px 2px 0 rgba(236, 72, 153, 0.05);
+      --shadow-md: 0 4px 6px -1px rgba(236, 72, 153, 0.1);
+      --shadow-lg: 0 10px 15px -3px rgba(236, 72, 153, 0.1);
+      --shadow-xl: 0 20px 25px -5px rgba(236, 72, 153, 0.1);
+      --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* Dark theme variables */
+    [data-theme="dark"] {
+      --primary: #f472b6;
+      --primary-dark: #ec4899;
+      --secondary: #c084fc;
+      --accent: #f9a8d4;
+      --dark: #fdf2f8;
+      --light: #1f2937;
+      --bg-color: #0b0f1a;
+      --text-color: #f3f4f6;
+      --text-muted: #9ca3af;
+      --text-secondary: #6b7280;
+      --text-inverse: #1f2937;
+      --card-bg: linear-gradient(135deg, rgba(244, 114, 182, 0.15) 0%, rgba(192, 132, 252, 0.15) 100%);
+      --gradient: linear-gradient(135deg, #f472b6 0%, #c084fc 50%, #8b5cf6 100%);
+      --gradient-2: linear-gradient(135deg, #f9a8d4 0%, #f472b6 100%);
+      --gradient-3: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+    }
+
+    [data-theme="light"] {
+      --bg-color: #fce7f3;
+      --text-color: #1f2937;
+      --text-muted: #6b7280;
+      --text-secondary: #9ca3af;
+      --text-inverse: #f3f4f6;
+      --card-bg: linear-gradient(135deg, #fce7f3 0%, #fbcfe8 100%);
+    }
+
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      line-height: 1.6;
+      color: var(--text-color, #f3f4f6);
+      background: var(--bg-color, #111827);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      transition: var(--transition);
+    }
+
+    /* Hero Section */
+    .hero {
+      margin-top: 80px;
+      padding: 4rem 2rem;
+      background: var(--gradient);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320"><path fill="%23ffffff" fill-opacity="0.1" d="M0,96L48,112C96,128,192,160,288,160C384,160,480,128,576,122.7C672,117,768,139,864,138.7C960,139,1056,117,1152,106.7C1248,96,1344,96,1392,96L1440,96L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"></path></svg>') no-repeat bottom;
+      background-size: cover;
+    }
+
+    .hero-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4rem;
+      align-items: center;
+      position: relative;
+      z-index: 1;
+    }
+
+    .hero-content h1 {
+      font-size: 3.5rem;
+      font-weight: 800;
+      color: var(--text-color);
+      margin-bottom: 1.5rem;
+      line-height: 1.2;
+      animation: fadeInUp 0.8s ease-out;
+    }
+
+    .hero-content p {
+      font-size: 1.25rem;
+      color: var(--text-muted);
+      margin-bottom: 2rem;
+      animation: fadeInUp 0.8s ease-out 0.2s both;
+    }
+
+    .hero-buttons {
+      display: flex;
+      gap: 1rem;
+      animation: fadeInUp 0.8s ease-out 0.4s both;
+    }
+
+    .btn-primary,
+    .btn-secondary {
+      padding: 1rem 2rem;
+      border: none;
+      border-radius: 50px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: var(--transition);
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .btn-primary {
+      background: var(--card-bg);
+      color: var(--primary);
+      box-shadow: var(--shadow-lg);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-xl);
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.2);
+      color: white;
+      border: 2px solid white;
+    }
+
+    .btn-secondary:hover {
+      background: var(--card-bg);
+      color: var(--primary);
+    }
+
+    .hero-image {
+      position: relative;
+      animation: float 3s ease-in-out infinite;
+    }
+
+    .hero-card {
+      background: var(--card-bg);
+      border-radius: 20px;
+      padding: 2rem;
+      box-shadow: var(--shadow-xl);
+      transform: perspective(1000px) rotateY(-10deg);
+      transition: var(--transition);
+    }
+
+    .hero-card:hover {
+      transform: perspective(1000px) rotateY(0deg);
+    }
+
+    .hero-card h3 {
+      color: var(--primary);
+      margin-bottom: 1rem;
+      font-size: 1.5rem;
+    }
+
+    /* Sidebar Styles */
+    .sidebar {
+      position: fixed;
+      top: 0;
+      left: -350px;
+      width: 350px;
+      height: 100vh;
+      background: var(--card-bg);
+      box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+      z-index: 2000;
+      transition: left 0.3s ease;
+      overflow-y: auto;
+    }
+
+    .sidebar.active {
+      left: 0;
+    }
+
+    .sidebar-header {
+      padding: 2rem;
+      background: var(--gradient);
+      color: white;
+      position: relative;
+    }
+
+    .profile-section {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .profile-photo {
+      position: relative;
+      width: 60px;
+      height: 60px;
+    }
+
+    .profile-photo img {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 3px solid white;
+    }
+
+    .profile-status {
+      position: absolute;
+      bottom: 0;
+      right: 0;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      border: 2px solid white;
+    }
+
+    .profile-status.online {
+      background: #10b981;
+    }
+
+    .user-info {
+      flex: 1;
+    }
+
+    .user-type {
+      font-size: 0.875rem;
+      opacity: 0.9;
+      font-weight: 500;
+      text-transform: uppercase;
+    }
+
+    .user-name {
+      font-size: 1.125rem;
+      font-weight: 600;
+    }
+
+    .sidebar-close {
+      position: absolute;
+      top: 1rem;
+      right: 1rem;
+      background: rgba(255, 255, 255, 0.2);
+      border: none;
+      color: white;
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.3s ease;
+    }
+
+    .sidebar-close:hover {
+      background: rgba(255, 255, 255, 0.3);
+    }
+
+    .sidebar-content {
+      padding: 2rem;
+    }
+
+    .sidebar-section {
+      margin-bottom: 2rem;
+    }
+
+    .sidebar-section h4 {
+      color: var(--dark);
+      font-size: 0.875rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      margin-bottom: 1rem;
+      opacity: 0.7;
+    }
+
+    .sidebar-btn {
+      width: 100%;
+      padding: 0.75rem 1rem;
+      background: transparent;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-size: 0.875rem;
+      color: var(--dark);
+      transition: all 0.3s ease;
+      margin-bottom: 0.5rem;
+    }
+
+    .sidebar-btn:hover {
+      background: var(--gradient);
+      color: white;
+      border-color: transparent;
+    }
+
+    .sidebar-toggle {
+      background: transparent;
+      border: none;
+      color: var(--text-color);
+      font-size: 1.25rem;
+      cursor: pointer;
+      padding: 0.5rem;
+      border-radius: 8px;
+      transition: background 0.3s ease;
+      display: flex;
+      align-items: center;
+    }
+
+    .sidebar-toggle:hover {
+      background: rgba(0, 0, 0, 0.05);
+    }
+
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1rem;
+      margin-top: 1.5rem;
+    }
+
+    .stat-item {
+      text-align: center;
+      padding: 1rem;
+      background: var(--light);
+      border-radius: 10px;
+    }
+
+    .stat-number {
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--primary);
+    }
+
+    .stat-label {
+      font-size: 0.875rem;
+      color: var(--text-muted);
+    }
+
+    @keyframes float {
+
+      0%,
+      100% {
+        transform: translateY(0);
+      }
+
+      50% {
+        transform: translateY(-10px);
+      }
+    }
+
+    /* Add Tenant Button */
+    .add-tenant-btn-container {
+      text-align: center;
+      margin-top: 2rem;
+    }
+
+    .add-tenant-btn {
+      background: var(--gradient);
+      color: white;
+      border: none;
+      padding: 1rem 2rem;
+      border-radius: 50px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 1rem;
+      transition: var(--transition);
+      box-shadow: var(--shadow-lg);
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .add-tenant-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-xl);
+      filter: brightness(1.1);
+    }
+
+    /* Tenant Status Badge - Smaller */
+    .tenant-status-badge {
+      position: absolute;
+      top: 1rem;
+      right: 1rem;
+      padding: 0.25rem 0.75rem;
+      border-radius: 15px;
+      font-size: 0.65rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .status-paid {
+      background: var(--success);
+      color: white !important;
+    }
+
+    .status-pending {
+      background: var(--warning);
+      color: white;
+    }
+
+    .status-late {
+      background: var(--danger);
+      color: white;
+    }
+
+    /* Utility Classes */
+    .pos-rel {
+      position: relative;
+    }
+
+    .flex-gap-half {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .pos-rel-flex {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .flex-col-gap {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .hidden-element {
+      display: none;
+    }
+
+    .small-muted-text {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .small-bold-text {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--primary);
+    }
+
+    .icon-btn-sync {
+      padding: 0 1rem;
+      border: 2px solid #e5e7eb;
+      background: var(--card-bg);
+      border-radius: 12px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .text-indigo-500 {
+      color: #6366f1;
+    }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    .nav-bg {
+      background: var(--gradient);
+    }
+
+    .shadow {
+      box-shadow: var(--shadow-lg);
+    }
+
+    .payment-records-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    /* Tenant Card with Status */
+    .tenant-card-enhanced {
+      position: relative;
+      padding: 2rem 2rem 2rem 2rem;
+    }
+
+    .tenant-amount-display {
+      position: absolute;
+      top: 1rem;
+      left: 1rem;
+      background: rgba(255, 255, 255, 0.95);
+      padding: 0.5rem 1rem;
+      border-radius: 10px;
+      font-weight: 600;
+      color: var(--primary);
+      box-shadow: var(--shadow-md);
+    }
+
+    /* Tenant Form Styles */
+    .tenant-form-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      display: none !important;
+      visibility: hidden !important;
+      opacity: 0 !important;
+      pointer-events: none !important;
+      z-index: -9999 !important;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(5px);
+    }
+
+    .tenant-form-overlay.show {
+      display: flex !important;
+      visibility: visible !important;
+      opacity: 1 !important;
+      pointer-events: auto !important;
+      z-index: 10000 !important;
+    }
+
+    .tenant-form-container {
+      background: var(--card-bg);
+      border-radius: 20px;
+      padding: 2.5rem;
+      max-width: 800px;
+      width: 90%;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: var(--shadow-xl);
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1.5rem;
+    }
+
+    /* Calendar Styles */
+    .calendar-container {
+      background: var(--card-bg);
+      border-radius: 15px;
+      padding: 1.5rem;
+      box-shadow: var(--shadow-lg);
+      margin-bottom: 2rem;
+    }
+
+    .calendar-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+
+    .calendar-nav {
+      display: flex;
+      gap: 1rem;
+      align-items: center;
+    }
+
+    .calendar-btn {
+      background: var(--primary);
+      color: white;
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+
+    .calendar-btn:hover {
+      background: var(--primary-dark);
+      transform: translateY(-1px);
+    }
+
+    .month-year-display {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: var(--primary);
+    }
+
+    /* Editable Tenant Name */
+    .tenant-title[contenteditable="true"] {
+      cursor: text;
+      padding: 0.5rem;
+      border-radius: 8px;
+      transition: var(--transition);
+      outline: none;
+    }
+
+    .tenant-title[contenteditable="true"]:hover {
+      background: rgba(99, 102, 241, 0.1);
+    }
+
+    .tenant-title[contenteditable="true"]:focus {
+      background: rgba(99, 102, 241, 0.2);
+      box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.3);
+    }
+
+    /* Records Controls */
+    .records-controls {
+      margin-bottom: 2rem;
+    }
+
+    .view-modes {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .view-modes label {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.75rem 1rem;
+      border: 2px solid var(--primary);
+      border-radius: 25px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: var(--transition);
+      background: var(--card-bg);
+      color: var(--primary);
+    }
+
+    .view-modes input[type="radio"] {
+      margin: 0;
+    }
+
+    .view-modes label:hover {
+      background: var(--primary);
+      color: white;
+      transform: translateY(-2px);
+    }
+
+    .view-modes input[type="radio"]:checked+span {
+      color: white;
+    }
+
+    .view-modes input[type="radio"]:checked+span::before {
+      content: '✓ ';
+      color: white;
+      font-weight: bold;
+    }
+
+    /* Payment Records Layout */
+    .payment-record-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.75rem;
+      margin-bottom: 0.5rem;
+      background: var(--card-bg);
+      border-radius: 8px;
+      border: 1px solid #e2e8f0;
+      transition: var(--transition);
+    }
+
+    .payment-record-item:hover {
+      box-shadow: var(--shadow-md);
+      transform: translateY(-1px);
+    }
+
+    .tenant-name {
+      font-weight: 600;
+      color: var(--primary);
+      flex: 1;
+    }
+
+    .payment-amount {
+      font-weight: 600;
+      color: var(--dark);
+      margin: 0 1rem;
+    }
+
+    .payment-date {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin: 0 0.5rem;
+    }
+
+    .payment-date.paid-date {
+      color: var(--success);
+      font-weight: 600;
+    }
+
+    .payment-status {
+      padding: 0.25rem 0.75rem;
+      border-radius: 12px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      min-width: 60px;
+      text-align: center;
+    }
+
+    /* Theme Toggle */
+    .theme-toggle {
+      position: fixed;
+      top: 100px;
+      right: 20px;
+      background: var(--gradient);
+      border: none;
+      border-radius: 50px;
+      padding: 0.75rem;
+      cursor: pointer;
+      box-shadow: var(--shadow-lg);
+      z-index: 1000;
+      transition: var(--transition);
+      color: white;
+      font-size: 1.25rem;
+      width: 50px;
+      height: 50px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .theme-toggle:hover {
+      transform: scale(1.1);
+      box-shadow: var(--shadow-xl);
+    }
+
+    /* Navigation */
+    nav {
+      position: fixed;
+      top: 0;
+      width: 100%;
+      background: rgba(17, 24, 39, 0.95);
+      backdrop-filter: blur(10px);
+      z-index: 1000;
+      box-shadow: var(--shadow-md);
+      transition: var(--transition);
+    }
+
+    .nav-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 1rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .logo {
+      font-size: 1.5rem;
+      font-weight: 700;
+      background: var(--gradient);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      text-decoration: none;
+    }
+
+    .nav-tabs {
+      display: flex;
+      gap: 1rem;
+    }
+
+    .nav-tab {
+      padding: 0.75rem 1.5rem;
+      cursor: pointer;
+      transition: var(--transition);
+      border-radius: 50px;
+      font-weight: 500;
+      color: var(--dark);
+      background: transparent;
+      border: 2px solid transparent;
+    }
+
+    .nav-tab:hover {
+      background: var(--light);
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+
+    .nav-tab.active {
+      background: var(--gradient);
+      color: white;
+      border-color: transparent;
+      box-shadow: var(--shadow-md);
+    }
+
+    .content-section {
+      display: none;
+      padding: 6rem 2rem 2rem;
+      max-width: 1400px;
+      margin: 0 auto;
+      min-height: 100vh;
+    }
+
+    .content-section.active {
+      display: block;
+      animation: fadeInUp 0.6s ease-out;
+    }
+
+    h1 {
+      text-align: center;
+      color: var(--dark);
+      margin: 2rem 0 3rem;
+      font-size: 3rem;
+      font-weight: 700;
+      background: var(--gradient);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .container {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 25px;
+    }
+
+    .tenant-card {
+      background: var(--card-bg);
+      border-radius: 20px;
+      padding: 2rem;
+      box-shadow: var(--shadow-lg);
+      transition: var(--transition);
+      position: relative;
+      overflow: hidden;
+      border: 1px solid rgba(226, 232, 240, 0.8);
+    }
+
+    .tenant-card:hover {
+      transform: translateY(-8px);
+      box-shadow: var(--shadow-xl);
+      border-color: var(--primary);
+    }
+
+    .tenant-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+    }
+
+    .unit1::before {
+      background: var(--gradient);
+    }
+
+    .unit2::before {
+      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    }
+
+    .unit3::before {
+      background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    }
+
+    .unit4::before {
+      background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+    }
+
+    .slip-card-2 {
+      background: var(--gradient-2);
+    }
+
+    .slip-card-3 {
+      background: linear-gradient(135deg, #f472b6 0%, #ec4899 100%);
+    }
+
+    .slip-card-4 {
+      background: linear-gradient(135deg, #f9a8d4 0%, #f472b6 100%);
+    }
+
+    .tenant-title {
+      color: var(--dark);
+      margin: 0 0 1.5rem;
+      font-size: 1.5rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .tenant-title i {
+      font-size: 1.5rem;
+      color: var(--primary);
+    }
+
+    .input-group {
+      margin-bottom: 1.5rem;
+      position: relative;
+    }
+
+    .input-group label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-weight: 500;
+      color: var(--dark);
+      font-size: 0.875rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .input-group i {
+      color: var(--primary);
+      font-size: 0.875rem;
+    }
+
+    input {
+      width: 100%;
+      padding: 1rem;
+      margin: 0.5rem 0;
+      border: 2px solid #e2e8f0;
+      border-radius: 12px;
+      box-sizing: border-box;
+      font-size: 1rem;
+      transition: var(--transition);
+      background: var(--light);
+      font-family: 'Inter', sans-serif;
+    }
+
+    input:focus {
+      border-color: var(--primary);
+      background: var(--card-bg);
+      outline: none;
+      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+      transform: translateY(-1px);
+    }
+
+    input::placeholder {
+      color: var(--text-secondary);
+    }
+
+    .total {
+      font-weight: 700;
+      font-size: 1.25rem;
+      margin: 1.5rem 0;
+      padding: 1.25rem;
+      border-radius: 12px;
+      text-align: center;
+      background: linear-gradient(135deg, var(--light) 0%, white 100%);
+      border: 2px solid var(--primary);
+      color: var(--primary);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .total::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(99, 102, 241, 0.1), transparent);
+      transition: left 0.5s;
+    }
+
+    .total:hover::before {
+      left: 100%;
+    }
+
+    .slip-container {
+      border-radius: 16px;
+      padding: 1.5rem;
+      margin-top: 1.5rem;
+      background: var(--card-bg);
+      text-align: center;
+      border: 2px solid #e2e8f0;
+      transition: var(--transition);
+      position: relative;
+    }
+
+    .slip-container:hover {
+      background: var(--card-bg);
+      border-color: var(--primary);
+      box-shadow: var(--shadow-lg);
+      transform: translateY(-2px);
+    }
+
+    .slip-title {
+      margin-top: 0;
+      color: var(--dark);
+      font-size: 1.25rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+    }
+
+    .slip-title i {
+      color: var(--primary);
+    }
+
+    .print-btn {
+      background: var(--gradient);
+      color: white;
+      border: none;
+      padding: 0.875rem 1.75rem;
+      border-radius: 50px;
+      cursor: pointer;
+      margin-top: 1rem;
+      font-weight: 600;
+      font-size: 0.875rem;
+      transition: var(--transition);
+      box-shadow: var(--shadow-md);
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .print-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-xl);
+      filter: brightness(1.1);
+    }
+
+    .print-btn:active {
+      transform: translateY(0);
+    }
+
+    .print-btn i {
+      font-size: 0.875rem;
+    }
+
+    .slip-details {
+      text-align: left;
+      margin-bottom: 15px;
+    }
+
+    .slip-details p {
+      margin: 8px 0;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .slip-details p span:last-child {
+      font-weight: 500;
+    }
+
+    /* Records Section */
+    .records-container {
+      background: var(--card-bg);
+      border-radius: 15px;
+      padding: 25px;
+      box-shadow: var(--shadow);
+      margin-bottom: 30px;
+    }
+
+    .year-selector {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .year-btn {
+      background: var(--nav-bg);
+      color: white;
+      border: none;
+      padding: 8px 15px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-weight: 500;
+    }
+
+    .current-year {
+      font-size: 1.5rem;
+      font-weight: 500;
+    }
+
+    .months-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 15px;
+    }
+
+    .month-card {
+      border: 1px solid #dfe6e9;
+      border-radius: 10px;
+      padding: 15px;
+      transition: var(--transition);
+    }
+
+    .month-card:hover {
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    }
+
+    .month-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+      padding-bottom: 5px;
+      border-bottom: 1px solid #eee;
+    }
+
+    .month-name {
+      font-weight: 500;
+      color: var(--dark);
+    }
+
+    .unit-status {
+      margin-top: 10px;
+    }
+
+    .unit-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 5px 0;
+      border-bottom: 1px dashed #eee;
+    }
+
+    .unit-name {
+      font-size: 0.9rem;
+    }
+
+    .status-paid {
+      color: #2ecc71;
+      font-weight: 500;
+    }
+
+    .status-unpaid {
+      color: #e74c3c;
+      font-weight: 500;
+    }
+
+    /* Toggle switch */
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 60px;
+      height: 34px;
+      margin-left: 10px;
+    }
+
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #ccc;
+      transition: .4s;
+      border-radius: 34px;
+    }
+
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 26px;
+      width: 26px;
+      left: 4px;
+      bottom: 4px;
+      background-color: white;
+      transition: .4s;
+      border-radius: 50%;
+    }
+
+    input:checked+.slider {
+      background-color: #2ecc71;
+    }
+
+    input:checked+.slider:before {
+      transform: translateX(26px);
+    }
+
+    /* Animations */
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(30px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes slideInLeft {
+      from {
+        opacity: 0;
+        transform: translateX(-30px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    @keyframes pulse {
+
+      0%,
+      100% {
+        transform: scale(1);
+      }
+
+      50% {
+        transform: scale(1.05);
+      }
+    }
+
+    @keyframes shimmer {
+      0% {
+        background-position: -1000px 0;
+      }
+
+      100% {
+        background-position: 1000px 0;
+      }
+    }
+
+    .animate-on-scroll {
+      opacity: 0;
+      transform: translateY(30px);
+      transition: all 0.6s ease-out;
+    }
+
+    .animate-on-scroll.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* Terms & Conditions Styles */
+    .terms-container {
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+
+    .terms-card {
+      background: var(--card-bg) !important;
+      border-radius: 20px;
+      padding: 2.5rem;
+      box-shadow: var(--shadow-xl);
+      border: 1px solid rgba(236, 72, 153, 0.1);
+      color: #000000 !important;
+    }
+
+    /* Force Light Theme for Terms Card always as requested */
+    [data-theme="dark"] .terms-card {
+      background: var(--card-bg) !important;
+      color: #000000 !important;
+      border-color: rgba(236, 72, 153, 0.1);
+    }
+
+    [data-theme="dark"] .terms-section {
+      background: #f9fafb !important;
+      /* Light gray */
+      border-left-color: var(--primary);
+    }
+
+    [data-theme="dark"] .terms-section h4 {
+      color: #1f2937 !important;
+      /* Dark gray/Black */
+    }
+
+
+    .terms-section {
+      margin-bottom: 2rem;
+      padding: 1.5rem;
+      background: #f8f9fa !important;
+      background-image: none !important;
+      /* FORCE REMOVE GRADIENT */
+      /* Solid Light Gray */
+      border-radius: 15px;
+      border-left: 4px solid var(--primary);
+      transition: var(--transition);
+    }
+
+    /* UNIVERSAL CONTRAST FIX FOR TERMS */
+    .terms-card,
+    .terms-card h3,
+    .terms-card h4,
+    .terms-card p,
+    .terms-card span,
+    .terms-card li,
+    .terms-card strong,
+    .terms-card i {
+      color: #000000 !important;
+      text-shadow: none !important;
+    }
+
+    /* Exception for colored status indicators if needed, but keeping them black/bold is safer for contrast unless specific colors are dark enough. 
+       Let's keep specific meaningful colors but darken them. */
+    .terms-card .text-primary {
+      color: #2563eb !important;
+    }
+
+    .terms-card .text-danger {
+      color: #dc2626 !important;
+    }
+
+    .terms-card .text-success {
+      color: #16a34a !important;
+    }
+
+    .terms-card .text-warning {
+      color: #d97706 !important;
+    }
+
+    .terms-section:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-lg);
+    }
+
+    .terms-footer {
+      padding: 1.5rem;
+      background: var(--gradient);
+      border-radius: 15px;
+      color: white;
+      margin-top: 2rem;
+    }
+
+    /* Tenant Card Styles */
+    .tenant-detail-card {
+      background: var(--card-bg);
+      border-radius: 20px;
+      padding: 2rem;
+      box-shadow: var(--shadow-lg);
+      transition: var(--transition);
+      position: relative;
+      overflow: hidden;
+      border: 1px solid rgba(236, 72, 153, 0.1);
+    }
+
+    .tenant-detail-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: var(--gradient);
+    }
+
+    .tenant-detail-card:hover {
+      transform: translateY(-8px);
+      box-shadow: var(--shadow-xl);
+    }
+
+    .tenant-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+    }
+
+    .tenant-info {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1rem;
+    }
+
+    .tenant-actions {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 1rem;
+    }
+
+    .edit-btn,
+    .delete-btn {
+      padding: 0.5rem 1rem;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.875rem;
+      transition: var(--transition);
+    }
+
+    .edit-btn {
+      background: var(--primary);
+      color: white;
+    }
+
+    .delete-btn {
+      background: var(--danger);
+      color: white;
+    }
+
+    .edit-btn:hover,
+    .delete-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+    }
+
+    @media (max-width: 1024px) {
+      .hero-container {
+        grid-template-columns: 1fr;
+        text-align: center;
+        gap: 2rem;
+      }
+
+      .hero-content h1 {
+        font-size: 2.5rem;
+      }
+
+      .nav-container {
+        flex-direction: column;
+        gap: 1rem;
+        padding: 1rem;
+      }
+
+      .nav-tabs {
+        order: 2;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .container {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+      }
+
+      .months-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
+      }
+
+      h1 {
+        font-size: 2rem;
+      }
+
+      .hero-content h1 {
+        font-size: 2rem;
+      }
+
+      .hero-content p {
+        font-size: 1rem;
+      }
+
+      .hero-buttons {
+        flex-direction: column;
+        align-items: center;
+      }
+
+      .btn-primary,
+      .btn-secondary {
+        width: 100%;
+        max-width: 300px;
+        justify-content: center;
+      }
+
+      .nav-container {
+        padding: 0.75rem 1rem;
+      }
+
+      .logo {
+        font-size: 1.25rem;
+      }
+
+      .nav-tab {
+        padding: 0.5rem 1rem;
+        font-size: 0.875rem;
+      }
+
+      .tenant-card {
+        padding: 1.5rem;
+      }
+
+      .tenant-title {
+        font-size: 1.25rem;
+      }
+
+      .input-group label {
+        font-size: 0.8rem;
+      }
+
+      input {
+        padding: 0.875rem;
+      }
+
+      .print-btn {
+        padding: 0.75rem 1.5rem;
+        font-size: 0.8rem;
+      }
+
+      .dashboard-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
+      }
+
+      .features-grid {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+      }
+
+      .ai-container {
+        grid-template-columns: 1fr;
+        gap: 2rem;
+      }
+
+      .stat-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.75rem;
+      }
+
+      .stat-number {
+        font-size: 1.5rem;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .content-section {
+        padding: 5rem 1rem 1rem;
+      }
+
+      .hero {
+        padding: 2rem 1rem;
+      }
+
+      .features,
+      .ai-section,
+      .dashboard {
+        padding: 3rem 1rem;
+      }
+
+      .dashboard-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .stat-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .hero-card {
+        padding: 1.5rem;
+      }
+
+      .feature-card {
+        padding: 1.5rem;
+      }
+
+      .ai-demo {
+        padding: 1.5rem;
+      }
+
+      .chat-interface {
+        height: 300px;
+        padding: 1rem;
+      }
+
+      .message-bubble {
+        font-size: 0.875rem;
+      }
+
+      .footer-container {
+        grid-template-columns: 1fr;
+        text-align: center;
+      }
+
+      .footer-section ul {
+        display: flex;
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 1rem;
+      }
+
+      .footer-bottom {
+        text-align: center;
+        padding: 2rem 1rem;
+        background: var(--gradient);
+        color: white;
+        margin: 0;
+        display: flex;
+        justify-content: center;
+        width: 100%;
+      }
+
+      .footer-bottom p {
+        margin: 0;
+        font-size: 0.9rem;
+        text-align: center;
+      }
+    }
+
+    .footer-bottom {
+      text-align: center;
+      padding: 1.5rem;
+      background: rgba(0, 0, 0, 0.05);
+      width: 100%;
+    }
+
+    .footer-bottom p {
+      text-align: center;
+      margin: 0 auto;
+    }
+
+    /* Template Carousel Styles */
+    .template-section {
+      margin-top: 4rem;
+      padding: 3rem 2rem;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 20px;
+      backdrop-filter: blur(10px);
+    }
+
+    .template-section h2 {
+      text-align: center;
+      color: var(--text-color);
+      font-size: 2rem;
+      margin-bottom: 1rem;
+    }
+
+    .template-section>p {
+      text-align: center;
+      color: var(--text-muted);
+      margin-bottom: 3rem;
+      font-size: 1.1rem;
+    }
+
+    .template-carousel {
+      position: relative;
+      max-width: 1200px;
+      margin: 0 auto;
+      overflow: hidden;
+    }
+
+    .template-container {
+      display: flex;
+      transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+      gap: 2rem;
+    }
+
+    .template-card {
+      min-width: 280px;
+      background: var(--card-bg);
+      border: 1px solid rgba(236, 72, 153, 0.1);
+      border-radius: 16px;
+      padding: 2rem;
+      text-align: center;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+      color: var(--text-color);
+    }
+
+    .template-card h3 {
+      color: red;
+    }
+
+    .template-card p {
+      color: var(--text-muted);
+      /* Dark Gray */
+    }
+
+    .template-preview {
+      background: var(--light);
+      border-radius: 10px;
+      padding: 1rem;
+      margin-bottom: 1.5rem;
+      font-style: italic;
+      color: var(--text-inverse);
+      font-size: 0.9rem;
+      border-left: 3px solid var(--primary);
+    }
+
+    .template-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: var(--gradient);
+    }
+
+    .template-card:hover {
+      transform: translateY(-10px);
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+    }
+
+    .template-card.active {
+      transform: scale(1.05);
+      box-shadow: 0 20px 40px rgba(236, 72, 153, 0.3);
+    }
+
+    .template-card.active::before {
+      height: 8px;
+    }
+
+    .template-icon {
+      width: 60px;
+      height: 60px;
+      background: var(--gradient);
+      border-radius: 15px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 1.5rem;
+      font-size: 1.5rem;
+      color: #800000;
+    }
+
+    .template-card h3 {
+      color: red;
+      font-size: 1.25rem;
+      margin-bottom: 1rem;
+    }
+
+    .template-card>p {
+      color: #6b7280;
+      line-height: 1.6;
+      margin-bottom: 1.5rem;
+    }
+
+    .template-preview {
+      background: var(--light);
+      border-radius: 10px;
+      padding: 1rem;
+      margin-bottom: 1.5rem;
+      font-style: italic;
+      color: #4b5563;
+      font-size: 0.9rem;
+      border-left: 3px solid var(--primary);
+    }
+
+    .template-select-btn {
+      width: 100%;
+      padding: 0.75rem;
+      background: var(--gradient);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+    }
+
+    .template-select-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(236, 72, 153, 0.3);
+    }
+
+    .template-actions {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+    }
+
+    .template-action-btn {
+      padding: 0.75rem;
+      background: white;
+      color: var(--primary);
+      border: 2px solid var(--primary);
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+    }
+
+    .template-action-btn:hover {
+      background: var(--primary);
+      color: white;
+      transform: translateY(-2px);
+    }
+
+    .template-select-btn {
+      flex: 1;
+    }
+
+
+    .carousel-btn {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      background: var(--card-bg);
+      border: none;
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+      cursor: pointer;
+      z-index: 10;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--primary);
+      font-size: 1.2rem;
+    }
+
+    .carousel-btn:hover {
+      background: var(--gradient);
+      color: white;
+      transform: translateY(-50%) scale(1.1);
+    }
+
+    .carousel-btn.prev {
+      left: -25px;
+    }
+
+    .carousel-btn.next {
+      right: -25px;
+    }
+
+    .template-dots {
+      display: flex;
+      justify-content: center;
+      gap: 0.5rem;
+      margin-top: 2rem;
+    }
+
+    .dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.3);
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .dot.active {
+      background: var(--card-bg);
+      transform: scale(1.3);
+    }
+
+    .dot:hover {
+      background: rgba(255, 255, 255, 0.7);
+    }
+
+    /* Responsive adjustments for template carousel */
+    @media (max-width: 768px) {
+      .template-section {
+        margin-top: 2rem;
+        padding: 2rem 1rem;
+      }
+
+      .template-card {
+        min-width: 250px;
+        padding: 1.5rem;
+      }
+
+      .carousel-btn.prev {
+        left: 10px;
+      }
+
+      .carousel-btn.next {
+        right: 10px;
+      }
+
+      .template-section h2 {
+        font-size: 1.5rem;
+      }
+    }
+
+    /* Auto-scrolling carousel animation */
+    @keyframes scrollTemplates {
+      0% {
+        transform: translateX(0);
+      }
+
+      100% {
+        transform: translateX(calc(-1 * (300px + 2rem) * 3));
+      }
+    }
+
+    .template-container.auto-scroll {
+      display: flex;
+      gap: 2rem;
+      animation: scrollTemplates 30s linear infinite;
+    }
+
+    .template-container.auto-scroll:hover {
+      animation-play-state: paused;
+    }
+
+    /* Utility classes for inline style replacement */
+    .nav-container-full {
+      max-width: 100%;
+      margin: 0;
+      padding: 1rem 1rem;
+    }
+
+    .nav-left-group {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .logo-gradient {
+      font-weight: 800;
+      background: linear-gradient(135deg, #06b6d4 0%, #0ea5e9 50%, #eab308 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      color: transparent;
+    }
+
+    .logo-icon {
+      background: none;
+      -webkit-text-fill-color: #6366f1;
+      color: #6366f1;
+    }
+
+    .upload-badge-owner {
+      position: absolute;
+      bottom: 0;
+      right: 0;
+      background: var(--primary);
+      color: white;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      border: 2px solid #111827;
+      transition: var(--transition);
+    }
+
+    .camera-icon {
+      font-size: 0.8rem;
+    }
+
+    .btn-signin {
+      padding: 0.5rem 1.5rem;
+      font-size: 0.9rem;
+    }
+
+    .checkbox-default {
+      width: auto;
+      margin: 0;
+    }
+
+    .flex-between {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+    }
+
+    .google-icon-color {
+      color: #DB4437;
+    }
+
+    .primary-lg {
+      color: var(--primary);
+      font-size: 1rem;
+    }
+
+    .video-container {
+      margin-bottom: 2rem;
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow: var(--shadow-xl);
+    }
+
+    .video-full {
+      width: 100%;
+      display: block;
+    }
+
+    .dark-red-heading {
+      color: #800000;
+    }
+
+    .dark-red-muted {
+      color: rgba(128, 0, 0, 0.7);
+    }
+
+    .template-warning {
+      background: #fffaf0;
+      border: 1px solid #fbd38d;
+    }
+
+    .template-feedback {
+      background: #f0fff4;
+      border: 1px solid #9ae6b4;
+    }
+
+    .primary-heading {
+      color: var(--primary);
+      font-size: 1.5rem;
+    }
+
+    .primary-heading-mb {
+      color: var(--primary);
+      margin-bottom: 1.5rem;
+    }
+
+    .secondary-heading {
+      color: var(--secondary);
+      margin-bottom: 1rem;
+    }
+
+    .lease-paragraph {
+      line-height: 1.8;
+      margin-bottom: 1.5rem;
+    }
+
+    .lease-indent {
+      margin-left: 2rem;
+      margin-top: 1rem;
+    }
+
+    .status-item {
+      margin-bottom: 0.5rem;
+    }
+
+    .status-paid {
+      color: var(--success);
+      font-weight: 600;
+    }
+
+    .status-pending {
+      color: var(--warning);
+      font-weight: 600;
+    }
+
+    .status-danger {
+      color: var(--danger);
+      font-weight: 600;
+    }
+
+    .checkbox-label {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-right: 1rem;
+    }
+
+    .checkbox-label-last {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+  </style>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+
+<body>
+  <!-- Navigation -->
+  <nav>
+    <div class="nav-container nav-container-full">
+      <div class="nav-left-group">
+        <button class="sidebar-toggle" onclick="toggleSidebar()">
+          <i class="fas fa-bars"></i>
+        </button>
+        <a href="landing.html" class="logo logo-gradient">
+          <i class="fas fa-building logo-icon"></i>
+          <span class="rentiva-heading">RENTIVA.ai</span>
+        </a>
+      </div>
+      <style>
+        .nav-tabs {
+          display: flex;
+          gap: 1rem;
+          flex: 1;
+          margin: 0 2rem;
+        }
+
+        .nav-tab {
+          flex: 1;
+          text-align: center;
+          padding: 0.75rem 1rem;
+          cursor: pointer;
+          transition: var(--transition);
+          border-radius: 50px;
+          font-weight: 500;
+          color: #f3f4f6;
+          background: transparent;
+          border: 2px solid transparent;
+          white-space: nowrap;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+        }
+
+        .nav-tab:hover {
+          background: var(--light);
+          border-color: var(--primary);
+          color: var(--primary);
+        }
+
+        .nav-tab.active {
+          background: var(--gradient);
+          color: white;
+          border-color: transparent;
+          box-shadow: var(--shadow-md);
+        }
+      </style>
+      <div class="nav-tabs">
+        <div class="nav-tab active" data-tab="home">Home</div>
+        <div class="nav-tab" data-tab="slips">Generate Slips</div>
+        <div class="nav-tab" data-tab="tenants">Tenants</div>
+        <div class="nav-tab" data-tab="records">Payment Records</div>
+        <div class="nav-tab" data-tab="terms">Terms & Conditions</div>
+        <div class="nav-tab" data-tab="analytics" id="analyticsTab">📊 Analytics</div>
+      </div>
+      <div class="nav-actions">
+        <button class="btn-primary btn-signin" onclick="openAuthModal()">
+          <i class="fas fa-sign-in-alt"></i> Sign In
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Sidebar -->
+  <div class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="profile-section">
+        <div class="profile-photo pos-rel">
+
+          <img src="https://picsum.photos/seed/user123/100/100.jpg" alt="Profile" id="profile-img">
+          <label for="profile-upload" class="upload-badge-owner" title="Upload Photo">
+            <i class="fas fa-camera camera-icon"></i>
+          </label>
+          <input type="file" id="profile-upload" hidden accept="image/*" onchange="handleImageUpload(event)">
+          <div class="profile-status online"></div>
+        </div>
+        <div class="profile-info">
+          <div class="user-type" id="user-type">OWNER</div>
+          <div class="user-name" id="user-name">Loading...</div>
+        </div>
+
+      </div>
+      <button class="sidebar-close" onclick="toggleSidebar()">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+
+    <div class="sidebar-content">
+      <div class="sidebar-section">
+        <h4>Account</h4>
+        <button class="sidebar-btn" onclick="openAuthModal()">
+          <i class="fas fa-sign-in-alt"></i> Login / Sign Up
+        </button>
+        <button class="sidebar-btn" onclick="toggleTheme();">
+          <i class="fas fa-moon" id="theme-icon"></i> <span id="theme-text">Dark Mode</span>
+        </button>
+        <button class="sidebar-btn" onclick="toggleNotifications()">
+          <i class="fas fa-bell" id="notification-icon"></i> <span id="notification-text">Notifications: ON</span>
+        </button>
+      </div>
+
+      <div class="sidebar-section">
+        <h4>Actions</h4>
+        <button class="sidebar-btn" onclick="window.location.href='chat.html'">
+          <i class="fas fa-comments text-indigo-500"></i> Rentiva Chat
+        </button>
+        <button class="sidebar-btn" onclick="switchTab('slips'); toggleSidebar();" id="owner-btn">
+          <i class="fas fa-home"></i> Owner Portal
+        </button>
+        <button class="sidebar-btn" onclick="switchTab('analytics'); toggleSidebar();">
+          <i class="fas fa-chart-bar"></i> Analytics
+        </button>
+        <button class="sidebar-btn" onclick="window.location.href='tenant.html'" id="tenant-btn">
+          <i class="fas fa-user"></i> Tenant Portal
+        </button>
+        <button class="sidebar-btn ai-analyst-link" onclick="window.open('http://localhost:8501', '_blank')" style="border-left: 3px solid #a855f7;">
+          <i class="fas fa-robot" style="color: #a855f7;"></i> AI Data Analyst
+        </button>
+        <button class="sidebar-btn logout-btn" onclick="signOut()" id="signout-btn">
+          <i class="fas fa-sign-out-alt"></i> Sign Out
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Enhanced Auth Modal -->
+  <style>
+    /* Modern Auth Modal Styles */
+    .auth-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(8px);
+      z-index: 9999;
+      display: none;
+      justify-content: center;
+      align-items: center;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .auth-modal.active {
+      display: flex;
+      opacity: 1;
+    }
+
+    .auth-modal-content {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(20px);
+      border-radius: 24px;
+      padding: 2.5rem;
+      width: 100%;
+      max-width: 480px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+      border: 1px solid rgba(255, 255, 255, 0.5);
+      position: relative;
+      transform: scale(0.95);
+      transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .auth-modal.active .auth-modal-content {
+      transform: scale(1);
+    }
+
+    .auth-modal-header {
+      text-align: center;
+      margin-bottom: 2rem;
+      position: relative;
+    }
+
+    .auth-modal-header h2 {
+      font-size: 2rem;
+      font-weight: 800;
+      color: var(--text-color);
+      margin-bottom: 0.5rem;
+      background: var(--gradient);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .auth-modal-header p {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+    }
+
+    .modal-close {
+      position: absolute;
+      top: -1.5rem;
+      right: -1.5rem;
+      background: var(--card-bg);
+      border: none;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: var(--text-muted);
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+
+    .modal-close:hover {
+      background: var(--danger);
+      color: white;
+      transform: rotate(90deg);
+    }
+
+    .auth-tabs {
+      display: flex;
+      background: var(--light);
+      border-radius: 12px;
+      padding: 4px;
+      margin-bottom: 2rem;
+    }
+
+    .auth-tab {
+      flex: 1;
+      padding: 0.75rem;
+      border: none;
+      background: transparent;
+      border-radius: 8px;
+      font-weight: 600;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-size: 0.95rem;
+    }
+
+    .auth-tab.active {
+      background: var(--card-bg);
+      color: var(--primary);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    .auth-tab:hover:not(.active) {
+      background: rgba(255, 255, 255, 0.5);
+      color: var(--dark);
+    }
+
+    .form-group {
+      margin-bottom: 1.5rem;
+      position: relative;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-weight: 500;
+      color: var(--dark);
+      font-size: 0.9rem;
+    }
+
+    .form-group input {
+      width: 100%;
+      padding: 0.875rem 1rem 0.875rem 2.75rem;
+      border: 2px solid #e5e7eb;
+      border-radius: 12px;
+      font-size: 1rem;
+      transition: all 0.2s ease;
+      background: #f9fafb;
+    }
+
+    .form-group i {
+      position: absolute;
+      left: 1rem;
+      top: 2.4rem;
+      color: #9ca3af;
+      transition: color 0.2s ease;
+    }
+
+    .form-group input:focus {
+      border-color: var(--primary);
+      background: var(--card-bg);
+      outline: none;
+      box-shadow: 0 0 0 4px rgba(236, 72, 153, 0.1);
+    }
+
+    .form-group input:focus+i {
+      color: var(--primary);
+    }
+
+    .auth-submit-btn {
+      width: 100%;
+      padding: 1rem;
+      background: var(--gradient);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-weight: 600;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      margin-bottom: 1.5rem;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .auth-submit-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 15px -3px rgba(236, 72, 153, 0.3);
+    }
+
+    .auth-driver {
+      display: flex;
+      align-items: center;
+      margin: 1.5rem 0;
+      color: #9ca3af;
+      font-size: 0.9rem;
+    }
+
+    .auth-driver::before,
+    .auth-driver::after {
+      content: "";
+      flex: 1;
+      height: 1px;
+      background: #e5e7eb;
+    }
+
+    .auth-driver span {
+      padding: 0 1rem;
+    }
+
+    .social-auth-btn {
+      width: 100%;
+      padding: 0.875rem;
+      background: var(--card-bg);
+      border: 2px solid #e5e7eb;
+      border-radius: 12px;
+      font-weight: 600;
+      color: var(--dark);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+    }
+
+    .social-auth-btn:hover {
+      background: #f9fafb;
+      border-color: #d1d5db;
+    }
+
+    .form-footer {
+      text-align: center;
+      font-size: 0.9rem;
+      color: #6b7280;
+    }
+
+    .form-footer a {
+      color: var(--primary);
+      text-decoration: none;
+      font-weight: 600;
+      margin-left: 0.25rem;
+    }
+
+    .form-footer a:hover {
+      text-decoration: underline;
+    }
+
+    /* Animation classes */
+    .fade-mask {
+      display: none;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .fade-mask.active {
+      display: block;
+      opacity: 1;
+    }
+
+    /* Utility Classes for Inline Styles */
+    .lease-param-style {
+      margin-top: 1rem;
+    }
+
+    .lease-content-line {
+      line-height: 1.8;
+      margin-bottom: 1.5rem;
+    }
+
+    .text-primary-bold {
+      color: var(--primary);
+      font-weight: 600;
+    }
+
+    .text-secondary-dark {
+      color: var(--secondary);
+      margin-bottom: 1rem;
+    }
+
+    .text-warning-bold {
+      color: var(--warning);
+      font-weight: 600;
+    }
+
+    .text-success-bold {
+      color: var(--success);
+      font-weight: 600;
+    }
+
+    .terms-footer {
+      text-align: center;
+      font-weight: 600;
+      color: var(--primary);
+      margin-top: 2rem;
+    }
+
+    .analytics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 1.25rem;
+      margin-bottom: 2rem;
+    }
+
+    .stats-card {
+      text-align: center;
+      padding: 1.5rem;
+    }
+
+    .stat-value {
+      font-size: 2rem;
+      font-weight: 900;
+    }
+
+    .stat-value.stat-primary {
+      color: var(--primary);
+    }
+
+    .stat-value.stat-success {
+      color: var(--success);
+    }
+
+    .stat-value.stat-warning {
+      color: var(--warning);
+    }
+
+    .stat-value.stat-danger {
+      color: var(--danger);
+    }
+
+    .stat-value.stat-secondary {
+      color: var(--secondary);
+    }
+
+    .stat-value.stat-info {
+      color: #06b6d4;
+    }
+
+    .stat-label {
+      font-size: 0.85rem;
+      color: #6b7280;
+      margin-top: 4px;
+    }
+
+    .analytics-card {
+      margin-bottom: 2rem;
+    }
+
+    .analytics-title {
+      color: var(--primary);
+      margin-bottom: 1.25rem;
+    }
+
+    .chart-container {
+      position: relative;
+      max-height: 300px;
+    }
+
+    .analytics-note {
+      margin-top: 0.75rem;
+      font-size: 0.85rem;
+      color: #6b7280;
+      text-align: center;
+    }
+
+    .label-flex {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .optional-label {
+      font-size: 0.75rem;
+      color: #6b7280;
+    }
+
+    .input-margin-bottom {
+      margin-bottom: 0.5rem;
+    }
+
+    .input-margin-top {
+      margin-top: 0.5rem;
+    }
+
+    .slip-header {
+      text-align: center;
+      margin-bottom: 2rem;
+      padding: 1rem;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+      border-radius: 12px;
+      color: white;
+    }
+
+    .slip-header h1 {
+      font-family: 'Georgia', serif;
+      font-size: 2rem;
+      font-weight: bold;
+      margin: 0;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+    }
+
+    .slip-header p {
+      margin: 0.5rem 0 0 0;
+      font-size: 0.9rem;
+      opacity: 0.9;
+    }
+
+    .slip-config {
+      margin-bottom: 1.5rem;
+      padding: 1rem;
+      background: #f8fafc;
+      border-radius: 8px;
+      border: 1px solid #e2e8f0;
+    }
+
+    .slip-config-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+
+    .form-label-block {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+      color: var(--primary);
+    }
+
+    .form-select {
+      width: 100%;
+      padding: 0.5rem;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+    }
+
+    .form-input-full {
+      width: 100%;
+      padding: 0.5rem;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+    }
+
+    /* Slip and Payment Styles */
+    .slip-header-title {
+      font-family: 'Georgia', serif;
+      font-size: 2rem;
+      font-weight: bold;
+      margin: 0;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+    }
+
+    .slip-header-subtitle {
+      margin: 0.5rem 0 0 0;
+      font-size: 0.9rem;
+      opacity: 0.9;
+    }
+
+    .signature-preview {
+      height: 60px;
+      border: 2px dashed #e2e8f0;
+      border-radius: 6px;
+      display: none;
+    }
+
+    .signature-upload-input {
+      display: none;
+    }
+
+    .signature-controls {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .signature-section {
+      margin-top: 1rem;
+    }
+
+    .ticket-grid {
+      display: grid;
+      gap: 0.75rem;
+    }
+
+    .text-primary {
+      color: var(--primary);
+    }
+
+    .text-secondary {
+      color: var(--secondary);
+    }
+
+    .text-warning {
+      color: var(--warning);
+    }
+
+    .text-success {
+      color: var(--success);
+    }
+
+    .text-danger {
+      color: var(--danger);
+    }
+
+    .btn-primary {
+      padding: 0.5rem 1rem;
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .btn-danger {
+      padding: 0.5rem 1rem;
+      background: var(--danger);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .receipt-container {
+      font-family: 'Arial', sans-serif;
+      font-size: 0.95rem;
+    }
+
+    .receipt-header {
+      text-align: center;
+      margin-bottom: 1rem;
+      padding: 0.75rem;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+      border-radius: 8px;
+      color: white;
+    }
+
+    .receipt-period {
+      margin: 0;
+      font-size: 1.2rem;
+      font-weight: bold;
+      letter-spacing: 2px;
+    }
+
+    .receipt-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.5rem 0;
+      border-bottom: 1px solid #e2e8f0;
+    }
+
+    .label-bold {
+      font-weight: 600;
+    }
+
+    .amount-highlight {
+      font-weight: bold;
+      color: var(--primary);
+      text-align: right;
+    }
+
+    .text-success-bold {
+      font-weight: bold;
+      color: var(--success);
+    }
+
+    .receipt-total {
+      margin-top: 1.5rem;
+      padding-top: 1rem;
+      border-top: 2px solid #e2e8f0;
+      text-align: right;
+    }
+
+    .receipt-final-total {
+      margin-top: 2rem;
+      padding-top: 1rem;
+      border-top: 2px solid #e2e8f0;
+      text-align: right;
+    }
+
+    .receipt-footer {
+      text-align: center;
+      padding: 1rem;
+      background: #f0f0f0;
+      border-radius: 8px;
+      margin-top: 1rem;
+      font-size: 0.85rem;
+      color: #666;
+    }
+
+    .notice-box {
+      margin-bottom: 1rem;
+      padding: 1rem;
+      border-left: 4px solid var(--primary);
+      background: #f0f8ff;
+      border-radius: 4px;
+    }
+
+    .receipt-total-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.5rem 0;
+      border-bottom: 2px solid var(--primary);
+    }
+
+    .total-label {
+      font-weight: 600;
+      font-size: 1.1rem;
+    }
+
+    .total-amount {
+      font-size: 1.2rem;
+      font-weight: 900;
+      color: var(--success);
+    }
+
+    .signature-box {
+      margin-top: 2rem;
+      padding-top: 1rem;
+      border-top: 2px solid #e2e8f0;
+    }
+
+    .signature-center {
+      text-align: center;
+    }
+
+    .sig-img-container {
+      height: 60px;
+      margin-bottom: 0.5rem;
+    }
+
+    .sig-img-display {
+      height: 100%;
+      max-width: 200px;
+      display: none;
+    }
+
+    .sig-placeholder {
+      height: 60px;
+      width: 200px;
+      border-bottom: 2px solid #ccc;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #999;
+    }
+
+    .sig-label {
+      margin: 0;
+      font-weight: 600;
+    }
+
+    .print-button-container {
+      margin: 15px 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .total-amount-primary {
+      font-weight: bold;
+      font-size: 1.1rem;
+      color: var(--primary);
+    }
+
+    .btn-margin {
+      margin-left: 10px;
+    }
+
+    .btn-success {
+      background: var(--success);
+    }
+
+    .btn-danger-bg {
+      background: var(--danger);
+    }
+
+    .tenant-title {
+      color: var(--primary);
+      margin: 0;
+    }
+
+    .section-title-primary {
+      color: var(--primary);
+      margin-bottom: 1.5rem;
+    }
+
+    .form-control-large {
+      width: 100%;
+      padding: 1rem;
+      border: 2px solid #e2e8f0;
+      border-radius: 12px;
+    }
+
+    .label-medium {
+      font-weight: 500;
+    }
+
+    .form-textarea {
+      width: 100%;
+      padding: 1rem;
+      border: 2px solid #e2e8f0;
+      border-radius: 12px;
+      min-height: 80px;
+    }
+
+    .btn-cancel {
+      background: var(--danger);
+      color: white;
+    }
+
+    .empty-state {
+      color: #6b7280;
+      text-align: center;
+    }
+
+    .modal-card {
+      background: white;
+      border-radius: 16px;
+      padding: 2rem;
+      max-width: 500px;
+      width: 90%;
+    }
+
+    .modal-title {
+      margin: 0 0 1rem 0;
+      color: #1f2937;
+    }
+
+    .modal-description {
+      color: #6b7280;
+      margin-bottom: 1.5rem;
+    }
+
+    .share-textarea {
+      width: 100%;
+      padding: 1rem;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      margin-bottom: 1rem;
+      font-size: 14px;
+      resize: none;
+      height: 100px;
+    }
+
+    .btn-gradient {
+      flex: 1;
+      padding: 0.75rem;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    .btn-secondary-modal {
+      flex: 1;
+      padding: 0.75rem;
+      background: #f3f4f6;
+      color: #374151;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    .btn-cancel-modal {
+      width: 100%;
+      padding: 0.75rem;
+      background: #f3f4f6;
+      color: #374151;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    .footer-main {
+      text-align: center;
+      padding: 2rem;
+      width: 100%;
+      clear: both;
+      margin-top: auto;
+    }
+
+    .footer-content {
+      max-width: 1200px;
+      margin: 0 auto;
+      opacity: 0.6;
+      font-size: 0.9rem;
+    }
+
+    .btn-success-primary {
+      flex: 1;
+      padding: 0.75rem;
+      background: #10b981;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    .btn-cancel-full {
+      width: 100%;
+      padding: 0.75rem;
+      background: #f3f4f6;
+      color: #374151;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+  </style>
+
+  <div class="auth-modal" id="authModal">
+    <div class="auth-modal-content">
+      <button class="modal-close" onclick="closeAuthModal()">
+        <i class="fas fa-times"></i>
+      </button>
+
+      <div class="auth-modal-header">
+        <h2 id="modalTitle">Welcome Back</h2>
+        <p>Manage your properties with ease</p>
+      </div>
+
+      <div class="auth-tabs">
+        <button class="auth-tab active" onclick="switchAuthTab('login', event)">Sign In</button>
+        <button class="auth-tab" onclick="switchAuthTab('signup', event)">Create Account</button>
+      </div>
+
+      <!-- Login Form -->
+      <div id="loginForm" class="auth-form fade-mask active">
+        <form onsubmit="handleLogin(event, 'owner')">
+          <div class="form-group">
+            <label>Email Address</label>
+            <input type="email" placeholder="you@example.com" required>
+            <i class="fas fa-envelope"></i>
+          </div>
+          <div class="form-group">
+            <label>Password</label>
+            <input type="password" placeholder="••••••••" required>
+            <i class="fas fa-lock"></i>
+          </div>
+          <div class="flex-between">
+            <label
+              style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; color: #6b7280; cursor: pointer;">
+              <input type="checkbox" class="checkbox-default"> Remember me
+            </label>
+            <a href="#"
+              style="font-size: 0.9rem; color: var(--primary); text-decoration: none; font-weight: 500;">Forgot
+              Password?</a>
+          </div>
+          <button type="submit" class="auth-submit-btn">
+            Sign In <i class="fas fa-arrow-right"></i>
+          </button>
+        </form>
+
+        <div class="auth-driver"><span>Or continue with</span></div>
+
+        <button class="social-auth-btn" onclick="handleGoogleAuth('owner')">
+          <i class="fab fa-google google-icon-color"></i> Google
+        </button>
+      </div>
+
+
+      <!-- Signup Form -->
+      <div id="signupForm" class="auth-form fade-mask">
+        <form onsubmit="handleSignup(event, 'owner')">
+          <div class="form-group">
+            <label>Full Name</label>
+            <input type="text" placeholder="John Doe" required>
+            <i class="fas fa-user"></i>
+          </div>
+          <div class="form-group">
+            <label>Email Address</label>
+            <input type="email" placeholder="you@example.com" required>
+            <i class="fas fa-envelope"></i>
+          </div>
+          <!-- Phone & Contact Sync -->
+          <div class="form-group">
+            <label>Phone Number</label>
+            <div class="flex-gap-half">
+              <div class="pos-rel-flex">
+                <input type="tel" id="ownerPhone" required placeholder="+91 98765 43210"
+                  style="width: 100%; padding: 0.875rem 1rem 0.875rem 2.75rem; border: 2px solid #e5e7eb; border-radius: 12px; font-size: 1rem; transition: all 0.2s ease; background: #f9fafb;">
+                <i class="fas fa-phone"></i>
+              </div>
+              <button type="button" class="icon-btn-sync" onclick="syncContacts('ownerPhone')" title="Sync Contacts"
+                style="padding: 0 1rem; border: 2px solid #e5e7eb; background: var(--card-bg); border-radius: 12px; cursor: pointer;">
+                <i class="fas fa-address-book primary-lg"></i>
+              </button>
+            </div>
+          </div>
+          <!-- OTP Section -->
+          <div class="form-group" id="owner-otp-section">
+            <label>OTP Verification</label>
+            <div class="otp-container flex-col-gap">
+              <button type="button" id="owner-generate-btn" class="btn-secondary" onclick="generateOTP('owner')"
+                style="width: 100%; padding: 0.75rem; font-size: 0.9rem; justify-content: center; background: rgba(236, 72, 153, 0.1); color: var(--primary); border: 1px solid var(--primary); border-radius: 12px; cursor: pointer;">
+                Generate OTP
+              </button>
+              <div id="owner-otp-input-group" class="hidden-element">
+                <div class="pos-rel">
+                  <input type="text" id="owner-otp-input" placeholder="Enter 6-digit OTP" maxlength="6"
+                    style="width: 100%; padding: 0.875rem 1rem 0.875rem 2.75rem; border: 2px solid #e5e7eb; border-radius: 12px; font-size: 1rem; letter-spacing: 4px; font-weight: 700;">
+                  <i class="fas fa-key"></i>
+                </div>
+                <div class="otp-timer-container">
+                  <span id="owner-timer" class="small-muted-text">00:00</span>
+                  <span id="owner-otp-status" class="small-bold-text"></span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Password</label>
+            <input type="password" placeholder="Create a password" required>
+            <i class="fas fa-lock"></i>
+          </div>
+          <button type="submit" class="auth-submit-btn">
+            Create Account <i class="fas fa-user-plus"></i>
+          </button>
+        </form>
+
+
+        <div class="form-footer">
+          By signing up, you agree to our <a href="#">Terms</a> and <a href="#">Privacy Policy</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function openAuthModal() {
+      const modal = document.getElementById('authModal');
+      modal.style.display = 'flex';
+      setTimeout(() => modal.classList.add('active'), 10);
+    }
+
+    function closeAuthModal() {
+      const modal = document.getElementById('authModal');
+      modal.classList.remove('active');
+      setTimeout(() => modal.style.display = 'none', 300);
+    }
+
+    function switchAuthTab(tab, event) {
+      // Update tabs
+      document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
+      if (event && event.target) {
+        event.target.classList.add('active');
+      }
+
+      // Update forms
+      document.querySelectorAll('.auth-form').forEach(f => {
+        f.classList.remove('active');
+        f.style.display = 'none';
+      });
+
+      const activeForm = document.getElementById(`${tab}Form`);
+      activeForm.style.display = 'block';
+      setTimeout(() => activeForm.classList.add('active'), 10);
+
+      // Update title
+      document.getElementById('modalTitle').textContent = tab === 'login' ? 'Welcome Back' : 'Get Started';
+    }
+
+    function handleAuth(e, type) {
+      e.preventDefault();
+      const btn = e.target.querySelector('button[type="submit"]');
+
+      // If signup, verify OTP first
+      if (type === 'signup') {
+        if (!window.generatedOTPs['owner'] || !window.generatedOTPs['owner'].verified) {
+          showNotification('Please verify your phone number with OTP first.', 'error');
+          return;
+        }
+      }
+
+      const originalText = btn.innerHTML;
+
+      btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Processing...';
+      btn.disabled = true;
+
+      // Simulate API call
+      setTimeout(() => {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+        closeAuthModal();
+        showNotification(type === 'login' ? 'Successfully signed in!' : 'Account verified & created!', 'success');
+
+        // Update UI to show logged in state if needed
+        if (type === 'login') {
+          // Example: update navbar or sidebar if we were doing real auth
+        }
+      }, 1500);
+    }
+
+    // OTP & Contacts Logic
+    window.generatedOTPs = {};
+
+
+    function generateOTP(userType) {
+      const phoneInput = document.getElementById(`${userType}Phone`);
+      if (!phoneInput.value || phoneInput.value.length < 10) {
+        showNotification('Please enter a valid phone number', 'error');
+        phoneInput.focus();
+        return;
+      }
+
+      // Simulate API call
+      const btn = document.getElementById(`${userType}-generate-btn`);
+      const originalText = btn.innerText;
+      btn.innerText = 'Sending...';
+      btn.disabled = true;
+
+      setTimeout(() => {
+        const otp = Math.floor(100000 + Math.random() * 900000);
+        window.generatedOTPs[userType] = { code: otp.toString(), verified: false };
+
+        // Show Inputs
+        document.getElementById(`${userType}-otp-input-group`).style.display = 'block';
+        btn.style.display = 'none';
+
+        // Simulate SMS
+        alert(`Rentiva OTP Code: ${otp}\nSentinel: Do not share this code.`);
+        showNotification('OTP sent to phone and email', 'success');
+
+        // Start Timer
+        startOTPTimer(userType);
+      }, 1500);
+    }
+
+
+    function startOTPTimer(userType) {
+      let timeLeft = 30; // 30 seconds
+      const timerDisplay = document.getElementById(`${userType}-timer`);
+      const input = document.getElementById(`${userType}-otp-input`);
+      const status = document.getElementById(`${userType}-otp-status`);
+
+      status.innerText = '';
+      status.style.color = 'inherit';
+      input.value = '';
+      input.disabled = false;
+      input.focus();
+
+      // Clear previous interval if any
+      if (window.generatedOTPs[userType].timerId) clearInterval(window.generatedOTPs[userType].timerId);
+
+
+      window.generatedOTPs[userType].timerId = setInterval(() => {
+        if (timeLeft <= 0) {
+          clearInterval(window.generatedOTPs[userType].timerId);
+          timerDisplay.innerText = "Resend OTP";
+          timerDisplay.style.cursor = "pointer";
+          timerDisplay.style.textDecoration = "underline";
+          timerDisplay.style.color = "var(--primary)";
+          timerDisplay.onclick = () => generateOTP(userType);
+        } else {
+          timerDisplay.innerText = `Resend in 00:${timeLeft < 10 ? '0' : ''}${timeLeft}`;
+          timeLeft--;
+        }
+      }, 1000);
+
+
+      // Add input listener for auto-verify
+      input.oninput = function () {
+        if (this.value.length === 6) {
+          verifyOTP(userType, this.value);
+        }
+      };
+    }
+
+    function verifyOTP(userType, inputCode) {
+      const status = document.getElementById(`${userType}-otp-status`);
+      const input = document.getElementById(`${userType}-otp-input`);
+
+      if (inputCode === window.generatedOTPs[userType].code) {
+        window.generatedOTPs[userType].verified = true;
+        status.innerText = '✓ Verified';
+        status.style.color = 'var(--success)';
+        input.style.borderColor = 'var(--success)';
+        input.disabled = true;
+        clearInterval(window.generatedOTPs[userType].timerId);
+        showNotification('Phone number verified successfully', 'success');
+      } else {
+        status.innerText = '✗ Invalid OTP';
+        status.style.color = 'var(--danger)';
+        input.style.borderColor = 'var(--danger)';
+        window.generatedOTPs[userType].verified = false;
+      }
+    }
+
+
+    async function syncContacts(inputId) {
+      const input = document.getElementById(inputId);
+
+      // Check if Contact Picker API is supported
+      if ('contacts' in navigator && 'ContactsManager' in window) {
+        try {
+          const props = ['name', 'tel'];
+          const opts = { multiple: false };
+
+          const contacts = await navigator.contacts.select(props, opts);
+
+          if (contacts.length) {
+            const contact = contacts[0];
+            const number = contact.tel && contact.tel[0] ? contact.tel[0] : '';
+            // Clean number
+            input.value = number;
+
+            if (window.auth && window.auth.currentUser) {
+              const { doc, setDoc } = await import("https://www.gstatic.com/firebasejs/11.1.0/firebase-firestore.js");
+              const cleanNumber = number.replace(/[^0-9]/g, '');
+              if (cleanNumber) {
+                await setDoc(doc(window.db, 'users', window.auth.currentUser.uid, 'contacts', cleanNumber), {
+                  name: (contact.name && contact.name.length > 0) ? contact.name[0] : 'Unknown',
+                  phone: number,
+                  syncedAt: new Date()
+                }, { merge: true });
+              }
+            }
+
+            const displayName = (contact.name && contact.name.length > 0) ? contact.name[0] : 'Unknown';
+            showNotification(`Synced: ${displayName}`, 'success');
+          }
+        } catch (ex) {
+          console.error(ex);
+          if (ex.name !== 'TypeError') {
+            showNotification('Unable to access contacts', 'error');
+          }
+        }
+      } else {
+        // Fallback for desktop/unsupported
+        showNotification('Contact Sync is only available on Mobile devices (Android/iOS)', 'info');
+      }
+    }
+
+    // Close modal on outside click
+    document.getElementById('authModal').addEventListener('click', function (e) {
+      if (e.target === this) closeAuthModal();
+    });
+  </script>
+
+  <!-- Theme Toggle Button -->
+  <button class="theme-toggle" onclick="toggleTheme()" title="Toggle Theme">
+    <i class="fas fa-moon" id="theme-icon"></i>
+  </button>
+
+  <!-- Home Hero Section -->
+  <section id="home" class="content-section active">
+    <div class="hero-container">
+      <div class="hero-content">
+        <h1>Smart Property Management with AI</h1>
+
+        <!-- Hero Video -->
+        <div class="video-container">
+          <video autoplay loop muted playsinline class="video-full">
+            <source src="Video/motion2Fast_Dynamic_AI_animation_showcasing_houses_rental_tran_0.mp4" type="video/mp4">
+          </video>
+        </div>
+
+        <p>Transform your rental business with intelligent automation, real-time insights, and predictive analytics
+          powered by advanced AI technology.</p>
+        <div class="hero-buttons">
+          <button class="btn-primary" onclick="switchTab('slips')">
+            <i class="fas fa-play"></i> Get Started
+          </button>
+          <button class="btn-secondary" onclick="switchTab('slips')">
+            <i class="fas fa-info-circle"></i> Launch App
+          </button>
+        </div>
+      </div>
+      <div class="hero-image">
+        <div class="hero-card">
+          <h3 class="dark-red-heading"><i class="fas fa-chart-line"></i> Live Dashboard</h3>
+          <div class="stat-grid">
+            <div class="stat-item">
+              <div class="stat-number">4</div>
+              <div class="stat-label">Total Units</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-number">4</div>
+              <div class="stat-label">Occupied</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-number">₹48.5K</div>
+              <div class="stat-label">Monthly Revenue</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-number">100%</div>
+              <div class="stat-label">Collection Rate</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Template Selection Section -->
+    <div class="template-section">
+      <h2 class="dark-red-heading"><i class="fas fa-file-alt"></i> Select Communication Template</h2>
+      <p class="dark-red-muted">Choose from our professional templates for different communication needs
+      </p>
+
+      <div class="template-carousel">
+        <button class="carousel-btn prev" onclick="slideTemplates(-1)">
+          <i class="fas fa-chevron-left"></i>
+        </button>
+
+        <div class="template-container auto-scroll">
+          <div class="template-card active" data-template="welcome"
+            style="background: #fff5f5; border: 1px solid #feb2b2;">
+            <div class="template-icon">
+              <i class="fas fa-hand-wave"></i>
+            </div>
+            <h3>Welcome Template</h3>
+            <p>Perfect for welcoming new tenants and introducing your property management system</p>
+            <div class="template-preview">
+              <p>"Welcome to your new home! We're excited to have you as part of our community..."</p>
+            </div>
+            <div class="template-actions">
+              <button class="template-action-btn" onclick="copyTemplate('welcome')" title="Copy Template">
+                <i class="fas fa-copy"></i>
+              </button>
+              <button class="template-action-btn" onclick="shareTemplate('welcome')" title="Share Template">
+                <i class="fas fa-share-alt"></i>
+              </button>
+              <button class="template-select-btn" onclick="selectTemplate('welcome')">
+                <i class="fas fa-check"></i> Use
+              </button>
+            </div>
+          </div>
+
+          <div class="template-card template-warning" data-template="warning">
+            <div class="template-icon">
+              <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <h3>Late Payment Warning</h3>
+            <p>Send professional reminders for late or upcoming rent payments</p>
+            <div class="template-preview">
+              <p>"This is a friendly reminder that your rent payment for this month is overdue..."</p>
+            </div>
+            <div class="template-actions">
+              <button class="template-action-btn" onclick="copyTemplate('warning')" title="Copy Template">
+                <i class="fas fa-copy"></i>
+              </button>
+              <button class="template-action-btn" onclick="shareTemplate('warning')" title="Share Template">
+                <i class="fas fa-share-alt"></i>
+              </button>
+              <button class="template-select-btn" onclick="selectTemplate('warning')">
+                <i class="fas fa-check"></i> Use
+              </button>
+            </div>
+          </div>
+
+          <div class="template-card template-feedback" data-template="feedback">
+            <div class="template-icon">
+              <i class="fas fa-comment-dots"></i>
+            </div>
+            <h3>Feedback Survey</h3>
+            <p>Collect valuable feedback from tenants about their living experience</p>
+            <div class="template-preview">
+              <p>"We'd love to hear about your experience living in our property. Your feedback helps us improve..."</p>
+            </div>
+            <button class="template-select-btn" onclick="selectTemplate('feedback')">
+              <i class="fas fa-check"></i> Select Template
+            </button>
+          </div>
+
+          <div class="template-card" data-template="maintenance"
+            style="background: #ebf8ff; border: 1px solid #90cdf4;">
+            <div class="template-icon">
+              <i class="fas fa-tools"></i>
+            </div>
+            <h3>Maintenance Notice</h3>
+            <p>Inform tenants about scheduled maintenance or repair work</p>
+            <div class="template-preview">
+              <p>"We will be conducting maintenance work in your area on [date]. Please be advised..."</p>
+            </div>
+            <button class="template-select-btn" onclick="selectTemplate('maintenance')">
+              <i class="fas fa-check"></i> Select Template
+            </button>
+          </div>
+        </div>
+
+        <button class="carousel-btn next" onclick="slideTemplates(1)">
+          <i class="fas fa-chevron-right"></i>
+        </button>
+      </div>
+
+      <div class="template-dots">
+        <span class="dot active" onclick="goToSlide(0)"></span>
+        <span class="dot" onclick="goToSlide(1)"></span>
+        <span class="dot" onclick="goToSlide(2)"></span>
+        <span class="dot" onclick="goToSlide(3)"></span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Slips Section -->
+  <section id="slips" class="content-section">
+    <h1>🏠 Rent Payment Slips</h1>
+
+    <div class="container" id="slips-container">
+      <!-- Dynamic tenant cards will be added here -->
+    </div>
+
+    <!-- Add Tenant Button -->
+    <div class="add-tenant-btn-container">
+      <button class="add-tenant-btn" onclick="addNewSlipCard()">
+        <i class="fas fa-plus"></i> Add Tenant Card
+      </button>
+    </div>
+  </section>
+
+  <!-- Tenants Dashboard Section -->
+  <section id="tenants" class="content-section">
+    <h1>👥 Tenants Dashboard</h1>
+
+    <div class="flex-between">
+      <h2 class="primary-heading">Manage Tenants</h2>
+      <button class="print-btn" onclick="addNewTenant()">
+        <i class="fas fa-plus"></i> Add Tenant
+      </button>
+    </div>
+
+    <div class="container" id="tenants-container">
+      <!-- Tenants will be dynamically added here -->
+    </div>
+  </section>
+
+  <!-- Records Section -->
+
+  <section id="records" class="content-section">
+    <h1>📅 Payment Records</h1>
+
+    <div class="records-controls">
+      <div class="view-modes">
+        <label class="checkbox-label">
+          <input type="radio" name="viewMode" value="monthly" checked onchange="changeViewMode('monthly')">
+          <span>Monthly</span>
+        </label>
+        <label class="checkbox-label">
+          <input type="radio" name="viewMode" value="quarterly" onchange="changeViewMode('quarterly')">
+          <span>Quarterly</span>
+        </label>
+        <label class="checkbox-label-last">
+          <input type="radio" name="viewMode" value="yearly" onchange="changeViewMode('yearly')">
+          <span>Yearly</span>
+        </label>
+      </div>
+
+      <div class="calendar-container">
+        <div class="calendar-header">
+          <button class="calendar-btn" onclick="changeYear(-1)">
+            <i class="fas fa-chevron-left"></i> Previous Year
+          </button>
+          <div class="month-year-display" id="current-year">2024</div>
+          <button class="calendar-btn" onclick="changeYear(1)">
+            Next Year <i class="fas fa-chevron-right"></i>
+          </button>
+        </div>
+
+        <input type="date" id="calendar-date"
+          style="width: 100%; padding: 1rem; border: 2px solid #e2e8f0; border-radius: 12px; margin-bottom: 1rem;"
+          onchange="updateCalendarDate()">
+      </div>
+    </div>
+
+    <div class="records-container">
+      <div class="months-grid" id="months-grid">
+        <!-- Records will be generated here -->
+      </div>
+    </div>
+  </section>
+
+  <!-- Terms & Conditions Section -->
+  <section id="terms" class="content-section">
+    <h1>📋 Terms & Conditions</h1>
+
+    <div class="terms-container">
+      <div class="terms-card">
+        <h3 class="primary-heading-mb"><i class="fas fa-file-contract"></i> Rental Agreement
+          Terms</h3>
+
+        <div class="terms-section">
+          <h4 class="secondary-heading">📈 Rent Increase Policy</h4>
+          <p class="lease-paragraph">
+            <strong class="text-primary">Annual Rent Increase:</strong> Rent may increase by <strong class="text-danger">15% yearly</strong> based on market conditions and property maintenance
+            costs.
+            Tenants will be notified at least <strong class="text-success">60 days</strong> before any rent
+            increase takes effect.
+          </p>
+        </div>
+
+        <div class="terms-section">
+          <h4 class="secondary-heading">⏰ Payment Timelines & Status</h4>
+          <p class="lease-paragraph">
+            <strong class="text-primary">Due Date:</strong> Rent is due on the <strong class="text-danger">1st day of each month</strong>.
+            Payment status is automatically updated based on payment dates:
+          </p>
+          <div class="lease-indent">
+            <p class="status-item">
+              <span class="status-paid">✓ PAID:</span> If rent is paid on or before 1st of
+              the month
+            </p>
+            <p class="status-item">
+              <span class="status-pending">⚠ PENDING:</span> If rent is unpaid for 1-2 days
+              after due date
+            </p>
+            <p class="status-item">
+              <span class="status-danger">✗ LATE:</span> If rent is unpaid for 3 or more days
+              after due date
+            </p>
+          </div>
+          <p class="lease-paragraph lease-param-style">
+            <strong class="text-warning">Late payments</strong> may incur additional charges. Tenants should
+            maintain timely payments to avoid late fees and maintain good standing.
+          </p>
+        </div>
+
+        <div class="terms-section">
+          <h4 class="secondary-heading">🏠 Property Maintenance</h4>
+          <p class="lease-paragraph">
+            <strong class="text-primary">Maintenance Responsibility:</strong> Property owner is responsible
+            for major repairs and structural maintenance.
+            Tenants are responsible for keeping the property clean and reporting any issues promptly.
+          </p>
+        </div>
+
+        <div class="terms-section">
+          <h4 class="secondary-heading">💰 Utility Payments</h4>
+          <p class="lease-content-line">
+            <strong class="text-primary-bold">Electricity & Water:</strong> Tenants are responsible for electricity
+            and water consumption charges
+            based on actual usage. Rates are determined by local utility providers and may vary seasonally.
+          </p>
+        </div>
+
+        <div class="terms-section">
+          <h4 class="text-secondary-dark">📝 Termination Policy</h4>
+          <p class="lease-content-line">
+            <strong class="text-primary-bold">Notice Period:</strong> <strong class="text-warning-bold">30
+              days written notice</strong> is required for lease termination.
+            Security deposit will be returned within <strong class="text-success-bold">15 days</strong> of
+            vacating, subject to property inspection.
+          </p>
+        </div>
+
+        <div class="terms-footer">
+          <p class="terms-footer">
+            <i class="fas fa-info-circle"></i> This agreement is legally binding and subject to local rental laws.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Analytics Section -->
+  <section id="analytics" class="content-section">
+    <h1>📊 Analytics Dashboard</h1>
+
+    <div class="terms-card ai-powerup-card" style="margin-bottom: 2rem; border-left: 5px solid #a855f7; background: linear-gradient(90deg, rgba(168, 85, 247, 0.1) 0%, rgba(236, 72, 153, 0.1) 100%); padding: 1.5rem;">
+      <div style="display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap;">
+        <div style="flex: 1; min-width: 300px;">
+          <h3 style="margin-bottom: 0.5rem; color: #a855f7;"><i class="fas fa-magic"></i> AI-Powered Deep Insights</h3>
+          <p style="color: var(--text-muted); font-size: 0.9rem;">Experience the future of property management. Launch our AI Data Analyst to query your reports using natural language. No SQL knowledge required.</p>
+        </div>
+        <button class="btn-primary" onclick="window.open('http://localhost:8501', '_blank')" style="background: var(--gradient); color: white; padding: 0.75rem 1.5rem; border-radius: 12px; font-weight: 700; box-shadow: 0 4px 15px rgba(168, 85, 247, 0.3);">
+          LAUNCH AGENT <i class="fas fa-external-link-alt" style="margin-left: 0.5rem;"></i>
+        </button>
+      </div>
+    </div>
+
+    <div class="analytics-grid" id="analyticsStats">
+      <div class="terms-card stats-card">
+        <div class="stat-value stat-primary" id="statRevenue">—</div>
+        <div class="stat-label">Total Revenue (₹)</div>
+      </div>
+      <div class="terms-card stats-card">
+        <div class="stat-value stat-success" id="statPaid">—</div>
+        <div class="stat-label">Payments Received</div>
+      </div>
+      <div class="terms-card stats-card">
+        <div class="stat-value stat-secondary" id="statOccupancy">—</div>
+        <div class="stat-label">Occupancy Rate</div>
+      </div>
+      <div class="terms-card stats-card">
+        <div class="stat-value stat-warning" id="statLeases">—</div>
+        <div class="stat-label">Active Leases</div>
+      </div>
+      <div class="terms-card stats-card">
+        <div class="stat-value stat-danger" id="statTickets">—</div>
+        <div class="stat-label">Open Tickets</div>
+      </div>
+      <div class="terms-card stats-card">
+        <div class="stat-value stat-info" id="statAvgResolution">—</div>
+        <div class="stat-label">Avg. Resolution (Days)</div>
+      </div>
+    </div>
+
+    <div class="grid cols-2" style="grid-template-columns: 2fr 1fr; gap: 1.5rem; margin-bottom: 2rem;">
+      <div class="terms-card analytics-card">
+        <h3 class="analytics-title"><i class="fas fa-chart-line"></i> Revenue Trends & Occupancy</h3>
+        <div class="chart-container" style="height: 350px;">
+          <canvas id="revenueTrendChart"></canvas>
+        </div>
+      </div>
+      
+      <div class="terms-card analytics-card">
+        <h3 class="analytics-title"><i class="fas fa-chart-pie"></i> Payment Status</h3>
+        <div class="chart-container" style="height: 300px;">
+          <canvas id="paymentStatusChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <div class="terms-card analytics-card">
+      <h3 class="analytics-title"><i class="fas fa-chart-bar"></i> Monthly Revenue Breakdown</h3>
+      <div class="chart-container" style="height: 300px;">
+        <canvas id="revenueChart"></canvas>
+      </div>
+      <div id="aiInsightBox" class="terms-card" style="display: none; margin-bottom: 1.5rem; background: linear-gradient(135deg, rgba(168, 85, 247, 0.1), rgba(236, 72, 153, 0.1)); border: 1px solid var(--secondary); padding: 1.5rem; border-radius: 16px;">
+        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+          <i class="fas fa-robot" style="color: var(--secondary); font-size: 1.2rem;"></i>
+          <h4 style="margin: 0; color: var(--secondary);">Python AI Data Analyst</h4>
+        </div>
+        <div id="aiInsightText" style="font-size: 0.95rem; line-height: 1.6; color: var(--text-color);"></div>
+      </div>
+      <p id="analyticsNote" class="analytics-note"></p>
+    </div>
+
+    <div class="terms-card">
+      <h3 class="analytics-title"><i class="fas fa-screwdriver-wrench"></i> Open Maintenance Tickets</h3>
+      <div id="analyticsTicketList" class="ticket-grid"></div>
+    </div>
+  </section>
+
+  <script>
+    // ── Analytics Section Logic ───────────────────────────────────────────────
+    let revenueChartInstance = null;
+    let trendChartInstance = null;
+    let paymentChartInstance = null;
+
+    async function loadAnalytics() {
+      const note = document.getElementById('analyticsNote');
+      note.textContent = 'Gathering intelligence... 🧠';
+
+      try {
+        const user = window.auth && window.auth.currentUser;
+        let token = '';
+        if (user) {
+          token = await user.getIdToken();
+        } else {
+          token = localStorage.getItem('rentiva_jwt') || '';
+        }
+
+        const headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` };
+
+        const [summaryRes, maintenanceRes] = await Promise.all([
+          fetch('/api/analytics/summary', { headers }),
+          fetch('/api/maintenance', { headers }),
+        ]);
+
+        if (!summaryRes.ok) throw new Error(`Analytics API: ${summaryRes.status}`);
+        const data = await summaryRes.json();
+        const { totalRevenue, paidCount, activeLeases, openTickets, monthlyBreakdown, paymentStatus, occupancyTrend, aiInsight } = data;
+
+        // Update stat cards with enhanced values
+        document.getElementById('statRevenue').textContent = '₹' + Number(totalRevenue || 0).toLocaleString('en-IN');
+        document.getElementById('statPaid').textContent = paidCount || 0;
+        document.getElementById('statLeases').textContent = activeLeases || 0;
+        document.getElementById('statTickets').textContent = openTickets || 0;
+        
+        // Calculated trends
+        const occupancyRate = occupancyTrend ? occupancyTrend[occupancyTrend.length - 1].rate : '95%';
+        document.getElementById('statOccupancy').textContent = occupancyRate;
+        document.getElementById('statAvgResolution').textContent = '2.4'; // Mocked trend value
+
+        // 1. Line Chart: Revenue Trends & Occupancy
+        const trendCtx = document.getElementById('revenueTrendChart').getContext('2d');
+        if (trendChartInstance) trendChartInstance.destroy();
+        trendChartInstance = new Chart(trendCtx, {
+          type: 'line',
+          data: {
+            labels: (monthlyBreakdown || []).map(m => m.month),
+            datasets: [
+              {
+                label: 'Revenue Growth',
+                data: (monthlyBreakdown || []).map(m => m.revenue),
+                borderColor: '#ec4899',
+                backgroundColor: 'rgba(236, 72, 153, 0.1)',
+                fill: true,
+                tension: 0.4,
+                borderWidth: 3,
+                pointRadius: 4,
+                pointBackgroundColor: '#ec4899'
+              },
+              {
+                label: 'Occupancy %',
+                data: (occupancyTrend || monthlyBreakdown || []).map((m, i) => 85 + (i * 2)), // Mock trend
+                borderColor: '#06b6d4',
+                backgroundColor: 'transparent',
+                fill: false,
+                tension: 0.4,
+                borderWidth: 2,
+                borderDash: [5, 5],
+                yAxisID: 'y1'
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            scales: {
+              y: { 
+                beginAtZero: true, 
+                position: 'left',
+                ticks: { callback: v => '₹' + (v >= 1000 ? (v/1000) + 'k' : v) } 
+              },
+              y1: { 
+                beginAtZero: false, 
+                position: 'right', 
+                min: 0, 
+                max: 100,
+                grid: { drawOnChartArea: false },
+                ticks: { callback: v => v + '%' } 
+              }
+            },
+            plugins: {
+              legend: { position: 'top', labels: { usePointStyle: true, boxWidth: 6 } }
+            }
+          }
+        });
+
+        // 2. Doughnut Chart: Payment Status
+        const paymentCtx = document.getElementById('paymentStatusChart').getContext('2d');
+        if (paymentChartInstance) paymentChartInstance.destroy();
+        paymentChartInstance = new Chart(paymentCtx, {
+          type: 'doughnut',
+          data: {
+            labels: ['Paid', 'Pending', 'Overdue'],
+            datasets: [{
+              data: [paymentStatus?.paid || 75, paymentStatus?.pending || 15, paymentStatus?.overdue || 10],
+              backgroundColor: ['#10b981', '#f59e0b', '#ef4444'],
+              hoverOffset: 10,
+              borderWidth: 0,
+              cutout: '70%'
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { position: 'bottom', labels: { usePointStyle: true, padding: 20 } }
+            }
+          }
+        });
+
+        // 3. Bar Chart: Monthly Revenue Breakdown
+        const ctx = document.getElementById('revenueChart').getContext('2d');
+        if (revenueChartInstance) revenueChartInstance.destroy();
+        revenueChartInstance = new Chart(ctx, {
+          type: 'bar',
+          data: {
+            labels: (monthlyBreakdown || []).map(m => m.month),
+            datasets: [{
+              label: 'Monthly Income',
+              data: (monthlyBreakdown || []).map(m => m.revenue),
+              backgroundColor: 'rgba(168, 85, 247, 0.6)',
+              borderColor: '#a855f7',
+              borderWidth: 1,
+              borderRadius: 6
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+              y: { beginAtZero: true, ticks: { callback: v => '₹' + v.toLocaleString('en-IN') } }
+            }
+          }
+        });
+
+        // Render maintenance tickets
+        const ticketList = document.getElementById('analyticsTicketList');
+        if (maintenanceRes.ok) {
+          const { tickets } = await maintenanceRes.json();
+          const open = (tickets || []).filter(t => t.status !== 'resolved');
+          if (open.length === 0) {
+            ticketList.innerHTML = '<p style="color:#6b7280; text-align:center; padding: 2rem;">No open issues! Your property is in top shape. 🏠✨</p>';
+          } else {
+            ticketList.innerHTML = open.map(t => `
+              <div class="terms-card" style="padding: 1rem; margin-bottom: 0.75rem; border: 1px solid var(--border); border-radius: 12px; display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.05);">
+                <div>
+                  <div style="font-weight: 700; font-size: 0.9rem;">${t.title || 'Untitled Ticket'}</div>
+                  <div style="font-size: 0.75rem; color: var(--text-muted);">${t.category || 'Maintenance'} • ${new Date(t.createdAt).toLocaleDateString()}</div>
+                </div>
+                <div class="pill ${t.status === 'in_progress' ? 'pending' : 'overdue'}" style="font-size: 0.65rem;">${t.status.replace('_', ' ')}</div>
+              </div>
+            `).join('');
+          }
+        }
+
+        // Render AI Insight
+        const insightBox = document.getElementById('aiInsightBox');
+        const insightText = document.getElementById('aiInsightText');
+        if (aiInsight) {
+          insightBox.style.display = 'block';
+          // Convert bold markdown-style to HTML
+          insightText.innerHTML = aiInsight
+            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+            .replace(/\n/g, '<br>');
+        }
+
+        note.textContent = `Insights synchronized at ${new Date().toLocaleTimeString()}`;
+      } catch (err) {
+        note.textContent = `Analytics Sync Failed: ${err.message}`;
+        console.error('[Analytics UI]', err);
+      }
+    }
+
+    // Hook into the existing tab switching
+    document.addEventListener('DOMContentLoaded', () => {
+      // Load Chart.js from CDN
+      if (!window.Chart) {
+        const s = document.createElement('script');
+        s.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js';
+        document.head.appendChild(s);
+      }
+
+      // Listen for nav tab clicks on analytics tab
+      const analyticsTab = document.getElementById('analyticsTab');
+      if (analyticsTab) {
+        analyticsTab.addEventListener('click', () => {
+          // Small delay to let the section become visible first
+          setTimeout(loadAnalytics, 100);
+        });
+      }
+    });
+  </script>
+  <script>
+    // Tab switching function
+    function switchTab(tabName) {
+      const navTabs = document.querySelectorAll('.nav-tab');
+      navTabs.forEach(tab => {
+        tab.classList.remove('active');
+        if (tab.dataset.tab === tabName) {
+          tab.classList.add('active');
+        }
+      });
+
+      document.querySelectorAll('.content-section').forEach(section => {
+        section.classList.remove('active');
+      });
+
+      const targetSection = document.getElementById(tabName);
+      if (targetSection) {
+        targetSection.classList.add('active');
+        if (tabName === 'analytics') loadAnalytics();
+      }
+    }
+
+    // Modern interactions and animations
+    document.addEventListener('DOMContentLoaded', function () {
+      // Initialize animations on scroll
+      const observerOptions = {
+        threshold: 0.1,
+        rootMargin: '0px 0px -50px 0px'
+      };
+
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('visible');
+          }
+        });
+      }, observerOptions);
+
+      // Observe all tenant cards
+      document.querySelectorAll('.tenant-card').forEach(card => {
+        card.classList.add('animate-on-scroll');
+        observer.observe(card);
+      });
+
+      // Add hover effects to cards
+      document.querySelectorAll('.tenant-card').forEach(card => {
+        card.addEventListener('mouseenter', function () {
+          this.style.transform = 'translateY(-8px) scale(1.02)';
+        });
+
+        card.addEventListener('mouseleave', function () {
+          this.style.transform = 'translateY(0) scale(1)';
+        });
+      });
+
+      // Enhanced input interactions
+      document.querySelectorAll('input[type="number"]').forEach(input => {
+        input.addEventListener('focus', function () {
+          this.parentElement.style.transform = 'scale(1.02)';
+        });
+
+        input.addEventListener('blur', function () {
+          this.parentElement.style.transform = 'scale(1)';
+        });
+      });
+
+      // Button click effects
+      document.querySelectorAll('.print-btn').forEach(btn => {
+        btn.addEventListener('click', function (e) {
+          // Create ripple effect
+          const ripple = document.createElement('span');
+          const rect = this.getBoundingClientRect();
+          const size = Math.max(rect.width, rect.height);
+          const x = e.clientX - rect.left - size / 2;
+          const y = e.clientY - rect.top - size / 2;
+
+          ripple.style.cssText = `
+            position: absolute;
+            width: ${size}px;
+            height: ${size}px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.5);
+            left: ${x}px;
+            top: ${y}px;
+            pointer-events: none;
+            transform: scale(0);
+            animation: ripple 0.6s ease-out;
+          `;
+
+          this.style.position = 'relative';
+          this.style.overflow = 'hidden';
+          this.appendChild(ripple);
+
+          setTimeout(() => ripple.remove(), 600);
+        });
+      });
+
+      // Add ripple animation
+      const style = document.createElement('style');
+      style.textContent = `
+        @keyframes ripple {
+          to {
+            transform: scale(4);
+            opacity: 0;
+          }
+        }
+      `;
+      document.head.appendChild(style);
+    });
+
+    // Enhanced calculate function with animations
+    function calculate(unitNumber) {
+      const current = parseFloat(document.getElementById(`unit${unitNumber}-current`).value) || 0;
+      const previous = parseFloat(document.getElementById(`unit${unitNumber}-previous`).value) || 0;
+      const rent = parseFloat(document.getElementById(`unit${unitNumber}-rent`).value) || 0;
+
+      const unitsUsed = Math.max(0, current - previous);
+      const electricityCharge = unitsUsed * ELECTRICITY_RATE;
+      const total = rent + electricityCharge;
+
+      // Update card total with enhanced animation
+      const totalElement = document.getElementById(`unit${unitNumber}-total`);
+      totalElement.style.transform = 'scale(1.1)';
+      totalElement.style.background = 'var(--gradient)';
+      totalElement.style.color = 'white';
+
+      setTimeout(() => {
+        totalElement.textContent = `Total Due: ₹${total.toFixed(2)}`;
+        totalElement.style.transform = 'scale(1)';
+        totalElement.style.background = 'linear-gradient(135deg, var(--light) 0%, white 100%)';
+        totalElement.style.color = 'var(--primary)';
+      }, 200);
+
+      // Update slip details with smooth transitions
+      const slipElements = [
+        `slip${unitNumber}-current`,
+        `slip${unitNumber}-previous`,
+        `slip${unitNumber}-units`,
+        `slip${unitNumber}-electricity`,
+        `slip${unitNumber}-rent`,
+        `slip${unitNumber}-total`
+      ];
+
+      const values = [current, previous, unitsUsed, electricityCharge.toFixed(2), rent.toFixed(2), total.toFixed(2)];
+
+      slipElements.forEach((id, index) => {
+        const element = document.getElementById(id);
+        if (element) {
+          element.style.transform = 'scale(1.05)';
+          element.style.color = 'var(--primary)';
+          setTimeout(() => {
+            element.textContent = values[index];
+            element.style.transform = 'scale(1)';
+            element.style.color = 'var(--dark)';
+          }, 100 * index);
+        }
+      });
+
+      // Update paid status color
+      updatePaidStatus(unitNumber);
+    }
+
+    function updatePaidStatus(unitNumber) {
+      const checkbox = document.getElementById(`paid${unitNumber}`);
+      const slipContainer = document.querySelector(`.unit${unitNumber} .slip-container`);
+
+      if (checkbox.checked) {
+        slipContainer.style.borderColor = 'var(--success)';
+        slipContainer.style.background = 'linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(16, 185, 129, 0.05) 100%)';
+        slipContainer.style.transform = 'scale(1.02)';
+      } else {
+        slipContainer.style.borderColor = '#e2e8f0';
+        slipContainer.style.background = 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)';
+        slipContainer.style.transform = 'scale(1)';
+      }
+    }
+
+    function updateTenantStatus(cardId) {
+      const checkbox = document.getElementById(`paid${cardId}`);
+      const slipContainer = document.querySelector(`#slips-container .tenant-card:nth-child(${cardId}) .slip-container`);
+      
+      if (checkbox && slipContainer) {
+        if (checkbox.checked) {
+          slipContainer.style.borderColor = 'var(--success)';
+          slipContainer.style.background = 'linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(16, 185, 129, 0.05) 100%)';
+          slipContainer.style.transform = 'scale(1.02)';
+        } else {
+          slipContainer.style.borderColor = '#e2e8f0';
+          slipContainer.style.background = 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)';
+          slipContainer.style.transform = 'scale(1)';
+        }
+      }
+    }
+
+    // Constants and existing functionality
+    const ELECTRICITY_RATE = 10;
+    const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+    let currentYear = new Date().getFullYear();
+    let records = JSON.parse(localStorage.getItem('rentRecords')) || {};
+    let tenants = JSON.parse(localStorage.getItem('tenants')) || [];
+    let slipCardCount = 0;
+    let currentTheme = localStorage.getItem('theme') || 'light';
+
+    // Default tenants data
+    const defaultTenants = [
+      { id: 1, name: 'Ankita', unit: 'Unit 1', rent: 12000, status: 'paid', amount: 12000 },
+      { id: 2, name: 'Arnabh', unit: 'Unit 2', rent: 10000, status: 'pending', amount: 10000 },
+      { id: 3, name: 'Priya', unit: 'Unit 3', rent: 11000, status: 'late', amount: 11000 }
+    ];
+
+    // Initialize default tenants if none exist
+    if (tenants.length === 0) {
+      tenants = defaultTenants;
+      localStorage.setItem('tenants', JSON.stringify(tenants));
+    }
+
+    // Theme toggle function
+    function toggleTheme() {
+      console.log('Theme toggle called, current theme:', currentTheme);
+      currentTheme = currentTheme === 'light' ? 'dark' : 'light';
+      document.documentElement.setAttribute('data-theme', currentTheme);
+      localStorage.setItem('theme', currentTheme);
+      updateThemeIcon();
+      console.log('Theme changed to:', currentTheme);
+    }
+
+    function updateThemeIcon() {
+      const icon = document.getElementById('theme-icon');
+      const text = document.getElementById('theme-text');
+      if (icon) {
+        icon.className = currentTheme === 'light' ? 'fas fa-sun' : 'fas fa-moon';
+      }
+      if (text) {
+        text.textContent = currentTheme === 'light' ? 'Light Mode' : 'Dark Mode';
+      }
+    }
+
+    function toggleNotifications() {
+      const icon = document.getElementById('notification-icon');
+      const text = document.getElementById('notification-text');
+      
+      if (icon && text) {
+        if (icon.classList.contains('fa-bell')) {
+          icon.className = 'fas fa-bell-slash';
+          text.textContent = 'Notifications: OFF';
+        } else {
+          icon.className = 'fas fa-bell';
+          text.textContent = 'Notifications: ON';
+        }
+      }
+    }
+
+    // Dynamic slip card functions
+    function addNewSlipCard() {
+      slipCardCount++;
+      const container = document.getElementById('slips-container');
+      const card = createSlipCard(slipCardCount);
+      container.appendChild(card);
+      setupSlipCardEventListeners(slipCardCount);
+    }
+
+    function createSlipCard(cardId) {
+      const card = document.createElement('div');
+      card.className = 'tenant-card tenant-card-enhanced';
+      card.innerHTML = `
+        <h3 class="tenant-title" contenteditable="true" id="tenant-name-${cardId}" onblur="updateTenantName(${cardId})"><i class="fas fa-user"></i> Tenant ${cardId}</h3>
+        
+        <div class="input-group">
+          <label for="slip${cardId}-current"><i class="fas fa-bolt"></i> Current Meter</label>
+          <input type="number" id="slip${cardId}-current" placeholder="Enter current reading" value="0">
+        </div>
+        
+        <div class="input-group">
+          <label for="slip${cardId}-previous"><i class="fas fa-history"></i> Previous Meter</label>
+          <input type="number" id="slip${cardId}-previous" placeholder="Enter previous reading">
+        </div>
+        
+        <div class="input-group">
+          <label for="slip${cardId}-electricity-rate"><i class="fas fa-bolt"></i> Electricity Rate (₹)</label>
+          <input type="number" id="slip${cardId}-electricity-rate" placeholder="Rate per unit" value="10">
+        </div>
+        
+        <div class="input-group">
+          <label for="slip${cardId}-rent"><i class="fas fa-money-bill-wave"></i> Monthly Rent</label>
+          <input type="number" id="slip${cardId}-rent" placeholder="Enter rent amount">
+        </div>
+        
+        <div class="input-group">
+          <label for="slip${cardId}-water" class="label-flex">
+            <i class="fas fa-tint"></i> Water Supply 
+            <span class="optional-label">(Optional)</span>
+          </label>
+          <input type="number" id="slip${cardId}-water" placeholder="Water units consumed" class="input-margin-bottom">
+          <input type="number" id="slip${cardId}-water-rate" placeholder="Rate per unit (₹)" class="input-margin-top">
+        </div>
+        
+        <div class="input-group">
+          <label for="slip${cardId}-other-units"><i class="fas fa-plus-circle"></i> Other Charges Units</label>
+          <input type="number" id="slip${cardId}-other-units" placeholder="Other units consumed">
+        </div>
+        
+        <div class="input-group">
+          <label for="slip${cardId}-other-rate"><i class="fas fa-money-bill"></i> Other Charges Rate (₹)</label>
+          <input type="number" id="slip${cardId}-other-rate" placeholder="Rate per unit (₹)">
+        </div>
+        
+        <div class="total" id="slip${cardId}-total">Total Due: ₹0</div>
+        
+        <div class="slip-container">
+          <h4 class="slip-title"><i class="fas fa-receipt"></i> Payment Receipt</h4>
+          
+          <!-- Slip Header with Logo -->
+          <div class="slip-header">
+            <h1>RENTIVA</h1>
+            <p>Property Management Solutions</p>
+          </div>
+          
+          <!-- Slip Configuration -->
+          <div class="slip-config">
+            <div class="slip-config-grid">
+              <div>
+                <label class="form-label-block">
+                  <i class="fas fa-calendar-alt"></i> Payment Mode
+                </label>
+                <select id="slip${cardId}-mode" class="form-select">
+                  <option value="monthly">Monthly</option>
+                  <option value="quarterly">Quarterly</option>
+                  <option value="yearly">Yearly</option>
+                </select>
+              </div>
+              <div>
+                <label class="form-label-block">
+                  <i class="fas fa-clock"></i> Period
+                </label>
+                <input type="text" id="slip${cardId}-period" placeholder="e.g., January 2026" class="form-input-full">
+              </div>
+            </div>
+            <div class="lease-param-style">
+              <label class="form-label-block">
+                <i class="fas fa-signature"></i> Owner Signature
+              </label>
+              <div class="signature-controls">
+                <img id="slip${cardId}-signature" src="" alt="Signature" class="signature-preview">
+                <input type="file" id="slip${cardId}-signature-upload" accept="image/*" class="signature-upload-input" onchange="uploadSignature(${cardId})">
+                <button type="button" onclick="document.getElementById('slip${cardId}-signature-upload').click()" class="btn-primary">
+                  <i class="fas fa-upload"></i> Upload Signature
+                </button>
+                <button type="button" onclick="removeSignature(${cardId})" class="btn-danger">
+                  <i class="fas fa-trash"></i> Remove
+                </button>
+              </div>
+            </div>
+          </div>
+          
+          <div class="slip-details" id="receipt${cardId}" class="receipt-container">
+            <div class="receipt-header">
+              <h3 class="receipt-period" id="receipt${cardId}-period">PERIOD</h3>
+            </div>
+            <p class="receipt-row"><span class="label-bold">Tenant:</span> <span id="receipt${cardId}-name">Tenant ${cardId}</span></p>
+            <p class="receipt-row"><span class="label-bold">Current Reading:</span> <span id="receipt${cardId}-current">0</span></p>
+            <p class="receipt-row"><span class="label-bold">Previous Reading:</span> <span id="receipt${cardId}-previous">0</span></p>
+            <p class="receipt-row"><span class="label-bold">Units Consumed:</span> <span id="receipt${cardId}-units">0</span></p>
+            <p class="receipt-row"><span class="label-bold">Electricity Charge:</span> <span>₹<span id="receipt${cardId}-electricity">0</span></span></p>
+            <p class="receipt-row"><span class="label-bold">Water Charge:</span> <span>₹<span id="receipt${cardId}-water">0</span></span></p>
+            <p class="receipt-row"><span class="label-bold">Other Charges:</span> <span>₹<span id="receipt${cardId}-other">0</span></span></p>
+            <p class="receipt-row"><span class="label-bold">Monthly Rent:</span> <span>₹<span id="receipt${cardId}-rent">0</span></span></p>
+            <p class="receipt-total-row"><span class="total-label">Total Amount Due:</span> <span class="total-amount-primary">₹<span id="receipt${cardId}-total">0</span></span></p>
+            <p style="display: flex; justify-content: space-between; padding: 0.5rem 0;"><span class="label-bold">Date:</span> <span id="receipt${cardId}-date"></span></p>
+          </div>
+          
+          <!-- Signature Section -->
+          <div class="signature-section signature-box">
+            <div class="signature-center">
+              <div class="sig-img-container">
+                <img id="receipt${cardId}-signature-img" src="" alt="Owner Signature" class="sig-img-display">
+                <div id="receipt${cardId}-signature-placeholder" class="signature-placeholder">Owner Signature</div>
+              </div>
+              <p class="sig-label">Authorized Signature</p>
+            </div>
+          </div>
+          
+          <div class="print-button-container">
+            <label class="label-medium">Paid Status:</label>
+            <label class="switch" for="paid${cardId}">
+              <span class="sr-only">Paid</span>
+              <input type="checkbox" id="paid${cardId}" onchange="updateTenantStatus(${cardId})">
+              <span class="slider"></span>
+            </label>
+          </div>
+          
+          <button class="print-btn" onclick="generateSlip(${cardId})"><i class="fas fa-save"></i> Save Record</button>
+          <button class="print-btn btn-margin" onclick="printSlip(${cardId})"><i class="fas fa-print"></i> Print</button>
+          <button class="print-btn btn-margin btn-success" onclick="saveAsTenant(${cardId})"><i class="fas fa-user-plus"></i> Save as Tenant</button>
+          <button class="print-btn btn-margin btn-danger-bg" onclick="deleteSlipCard(${cardId})"><i class="fas fa-trash"></i> Delete Card</button>
+        </div>
+      `;
+      return card;
+    }
+
+    function setupSlipCardEventListeners(cardId) {
+      // Reading inputs should only update on blur/change to avoid auto-correction
+      const readingInputs = [
+        `slip${cardId}-current`, `slip${cardId}-previous`
+      ];
+
+      // Other inputs can update on input
+      const otherInputs = [
+        `slip${cardId}-rent`, `slip${cardId}-electricity-rate`,
+        `slip${cardId}-water`, `slip${cardId}-water-rate`,
+        `slip${cardId}-other-units`, `slip${cardId}-other-rate`, `slip${cardId}-period`
+      ];
+
+      // Add blur/change listeners for reading inputs
+      readingInputs.forEach(id => {
+        const input = document.getElementById(id);
+        if (input) {
+          input.addEventListener('blur', () => calculateSlipCard(cardId));
+          input.addEventListener('change', () => calculateSlipCard(cardId));
+        }
+      });
+
+      // Add input listeners for other inputs
+      otherInputs.forEach(id => {
+        const input = document.getElementById(id);
+        if (input) input.addEventListener('input', () => calculateSlipCard(cardId));
+      });
+    }
+
+    function calculateSlipCard(cardId) {
+      const current = parseFloat(document.getElementById(`slip${cardId}-current`).value) || 0;
+      const previous = parseFloat(document.getElementById(`slip${cardId}-previous`).value) || 0;
+      const rent = parseFloat(document.getElementById(`slip${cardId}-rent`).value) || 0;
+      const electricityRate = parseFloat(document.getElementById(`slip${cardId}-electricity-rate`).value) || 10;
+      const waterUnits = parseFloat(document.getElementById(`slip${cardId}-water`).value) || 0;
+      const waterRate = parseFloat(document.getElementById(`slip${cardId}-water-rate`).value) || 0;
+      const otherUnits = parseFloat(document.getElementById(`slip${cardId}-other-units`).value) || 0;
+      const otherRate = parseFloat(document.getElementById(`slip${cardId}-other-rate`).value) || 0;
+
+      const unitsConsumed = Math.max(0, current - previous);
+      const electricityCharge = unitsConsumed * electricityRate;
+      const waterCharge = waterUnits * waterRate;
+      const otherCharges = otherUnits * otherRate;
+      const total = rent + electricityCharge + waterCharge + otherCharges;
+
+      // Update total display
+      document.getElementById(`slip${cardId}-total`).textContent = `Total Due: ₹${total.toFixed(2)}`;
+
+      // Update receipt
+      document.getElementById(`receipt${cardId}-current`).textContent = current;
+      document.getElementById(`receipt${cardId}-previous`).textContent = previous;
+      document.getElementById(`receipt${cardId}-units`).textContent = unitsConsumed;
+      document.getElementById(`receipt${cardId}-electricity`).textContent = electricityCharge.toFixed(2);
+      document.getElementById(`receipt${cardId}-water`).textContent = waterCharge.toFixed(2);
+      document.getElementById(`receipt${cardId}-other`).textContent = otherCharges.toFixed(2);
+      document.getElementById(`receipt${cardId}-rent`).textContent = rent.toFixed(2);
+      document.getElementById(`receipt${cardId}-total`).textContent = total.toFixed(2);
+
+      // Update period display in block letters
+      const periodInput = document.getElementById(`slip${cardId}-period`);
+      const periodDisplay = document.getElementById(`receipt${cardId}-period`);
+      if (periodInput && periodDisplay) {
+        const periodValue = periodInput.value.trim() || 'CURRENT PERIOD';
+        periodDisplay.textContent = periodValue.toUpperCase();
+      }
+
+      // Set current date
+      document.getElementById(`receipt${cardId}-date`).textContent = new Date().toLocaleDateString('en-GB');
+    }
+
+    function updateTenantName(cardId) {
+      const nameElement = document.getElementById(`tenant-name-${cardId}`);
+      const receiptNameElement = document.getElementById(`receipt${cardId}-name`);
+      const tenantName = nameElement.textContent.replace(/.*\s/, '').trim();
+
+      // Update receipt name
+      if (receiptNameElement) {
+        receiptNameElement.textContent = tenantName;
+      }
+
+      // Update card title to maintain icon
+      nameElement.innerHTML = `<i class="fas fa-user"></i> ${tenantName}`;
+    }
+
+    function deleteSlipCard(cardId) {
+      if (confirm('Are you sure you want to delete this slip card? This action cannot be undone.')) {
+        // Remove the card from DOM
+        const card = document.querySelector(`#slips-container .tenant-card:nth-child(${cardId})`);
+        if (card) {
+          card.remove();
+        }
+
+        // Clear signature from localStorage if it exists
+        localStorage.removeItem(`signature_${cardId}`);
+
+        showNotification("Slip card deleted successfully!", "success");
+
+        // Re-index remaining cards
+        reindexSlipCards();
+      }
+    }
+
+    function reindexSlipCards() {
+      const container = document.getElementById('slips-container');
+      const cards = container.querySelectorAll('.tenant-card');
+
+      cards.forEach((card, index) => {
+        const newIndex = index + 1;
+
+        // Update all IDs in the card
+        card.id = `slip-card-${newIndex}`;
+
+        // Update all element IDs within the card
+        const elementsToUpdate = [
+          'tenant-name', 'slip-current', 'slip-previous', 'slip-rent',
+          'slip-electricity-rate', 'slip-water', 'slip-water-rate',
+          'slip-other-units', 'slip-other-rate', 'slip-period', 'slip-total',
+          'paid', 'receipt-name', 'receipt-current', 'receipt-previous',
+          'receipt-units', 'receipt-electricity', 'receipt-water', 'receipt-other',
+          'receipt-rent', 'receipt-total', 'receipt-date', 'receipt-period',
+          'slip-signature', 'slip-signature-upload', 'receipt-signature-img',
+          'receipt-signature-placeholder'
+        ];
+
+        elementsToUpdate.forEach(elementBase => {
+          const element = card.querySelector(`[id*="${elementBase}"]`);
+          if (element) {
+            const oldId = element.id;
+            const newId = oldId.replace(/\d+/, newIndex);
+            element.id = newId;
+
+            // Update onclick attributes
+            if (element.onclick) {
+              element.onclick = () => {
+                if (oldId.includes('tenant-name')) updateTenantName(newIndex);
+                else if (oldId.includes('generateSlip')) generateSlip(newIndex);
+                else if (oldId.includes('printSlip')) printSlip(newIndex);
+                else if (oldId.includes('saveAsTenant')) saveAsTenant(newIndex);
+                else if (oldId.includes('deleteSlipCard')) deleteSlipCard(newIndex);
+                else if (oldId.includes('updateTenantStatus')) updateTenantStatus(newIndex);
+              };
+            }
+
+            // Update onblur attributes
+            if (element.onblur) {
+              element.onblur = () => updateTenantName(newIndex);
+            }
+
+            // Update onchange attributes
+            if (element.onchange) {
+              element.onchange = () => {
+                if (oldId.includes('paid')) updateTenantStatus(newIndex);
+                else if (oldId.includes('period') || oldId.includes('slip-')) calculateSlipCard(newIndex);
+              };
+            }
+          }
+        });
+      });
+
+      // Update slip card count
+      slipCardCount = cards.length;
+
+      // Re-setup event listeners for all cards
+      cards.forEach((card, index) => {
+        setupSlipCardEventListeners(index + 1);
+      });
+    }
+
+    function saveAsTenant(cardId) {
+      const nameElement = document.getElementById(`tenant-name-${cardId}`);
+      const tenantName = nameElement.textContent.replace(/.*\s/, '').trim();
+      const rent = parseFloat(document.getElementById(`slip${cardId}-rent`).value) || 0;
+
+      // Check if tenant already exists
+      const existingTenant = tenants.find(t => t.name === tenantName);
+      if (existingTenant) {
+        showNotification('Tenant already exists!', 'error');
+        return;
+      }
+
+      // Create new tenant from slip data
+      const newTenant = {
+        id: Date.now(),
+        name: tenantName,
+        rent: rent,
+        amount: rent,
+        status: 'pending',
+        phone: '',
+        email: '',
+        shiftDate: new Date().toISOString().split('T')[0]
+      };
+
+      // Add to tenants list
+      tenants.push(newTenant);
+      localStorage.setItem('tenants', JSON.stringify(tenants));
+
+      // Update displays
+      renderTenants();
+      generateMonthsGrid();
+
+      showNotification(`${tenantName} saved as tenant successfully!`, 'success');
+    }
+
+    // Enhanced calculate function with water and other charges
+    function calculate(unitNumber) {
+      const current = parseFloat(document.getElementById(`unit${unitNumber}-current`).value) || 0;
+      const previous = parseFloat(document.getElementById(`unit${unitNumber}-previous`).value) || 0;
+      const rent = parseFloat(document.getElementById(`unit${unitNumber}-rent`).value) || 0;
+      const waterUnits = parseFloat(document.getElementById(`unit${unitNumber}-water`).value) || 0;
+      const waterRate = parseFloat(document.getElementById(`unit${unitNumber}-water-rate`).value) || 0;
+      const otherUnits = parseFloat(document.getElementById(`unit${unitNumber}-other-units`).value) || 0;
+      const otherRate = parseFloat(document.getElementById(`unit${unitNumber}-other-rate`).value) || 0;
+
+      const unitsConsumed = current - previous;
+      const electricityCharge = unitsConsumed * ELECTRICITY_RATE;
+      const waterCharge = waterUnits * waterRate;
+      const otherCharges = otherUnits * otherRate;
+      const total = rent + electricityCharge + waterCharge + otherCharges;
+
+      // Update total display
+      document.getElementById(`unit${unitNumber}-total`).textContent = `Total Due: ₹${total.toFixed(2)}`;
+
+      // Update slip details
+      document.getElementById(`slip${unitNumber}-current`).textContent = current;
+      document.getElementById(`slip${unitNumber}-previous`).textContent = previous;
+      document.getElementById(`slip${unitNumber}-units`).textContent = unitsConsumed;
+      document.getElementById(`slip${unitNumber}-electricity`).textContent = electricityCharge.toFixed(2);
+      document.getElementById(`slip${unitNumber}-water`).textContent = waterCharge.toFixed(2);
+      document.getElementById(`slip${unitNumber}-other`).textContent = otherCharges.toFixed(2);
+      document.getElementById(`slip${unitNumber}-rent`).textContent = rent.toFixed(2);
+      document.getElementById(`slip${unitNumber}-total`).textContent = total.toFixed(2);
+
+      // Set current date
+      const currentDate = new Date().toLocaleDateString('en-GB');
+      document.getElementById(`slip${unitNumber}-date`).textContent = currentDate;
+    }
+
+    // Enhanced tenant management functions
+    function renderTenants() {
+      const container = document.getElementById('tenants-container');
+      if (!container) return;
+
+      container.innerHTML = '';
+
+      tenants.forEach(tenant => {
+        const tenantCard = document.createElement('div');
+        tenantCard.className = 'tenant-detail-card tenant-card-enhanced animate-on-scroll';
+        tenantCard.innerHTML = `
+          <div class="tenant-status-badge status-${tenant.status}">${tenant.status.toUpperCase()}</div>
+          <div class="tenant-header">
+            <h3 class="tenant-title"><i class="fas fa-user"></i> ${tenant.name}</h3>
+          </div>
+          <div class="tenant-info">
+            <div><strong>Phone:</strong> ${tenant.phone || 'N/A'}</div>
+            <div><strong>Total Rent:</strong> ₹${tenant.amount}</div>
+          </div>
+          <div class="tenant-actions">
+            <button class="edit-btn" onclick="editTenant('${tenant.id}')"><i class="fas fa-edit"></i> Edit</button>
+            <button class="delete-btn" onclick="deleteTenant('${tenant.id}')"><i class="fas fa-trash"></i> Delete</button>
+          </div>
+        `;
+        container.appendChild(tenantCard);
+      });
+
+      // Re-observe new elements
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('visible');
+          }
+        });
+      }, { threshold: 0.1 });
+
+      document.querySelectorAll('.tenant-detail-card').forEach(card => {
+        observer.observe(card);
+      });
+    }
+
+    function addNewTenant() {
+      showTenantFormSafe();
+    }
+
+    function showTenantForm(tenant = null) {
+      // This function is now completely disabled
+      console.error('showTenantForm called but is disabled');
+      return false;
+    }
+
+    // NEW function that only works when explicitly called from Add Tenant button
+    function showTenantFormSafe(tenant = null) {
+      // Set flag to indicate we're creating the form safely
+      window.isCreatingTenantForm = true;
+      
+      // Temporarily disable the aggressive protections
+      const originalInsertAdjacentHTML = Element.prototype.insertAdjacentHTML;
+      
+      // Create the form HTML
+      const formHtml = `
+        <div class="tenant-form-overlay" id="tenant-form-overlay" data-user-initiated="true">
+          <div class="tenant-form-container">
+            <h3 class="section-title-primary">
+              <i class="fas fa-user-plus"></i> ${tenant ? 'Edit' : 'Add'} Tenant Details
+            </h3>
+            
+            <div class="form-grid">
+              <div class="input-group">
+                <label><i class="fas fa-user"></i> Name *</label>
+                <input type="text" id="tenant-name" value="${tenant ? tenant.name : ''}" placeholder="Enter tenant name" required>
+              </div>
+              
+              <div class="input-group">
+                <label><i class="fas fa-venus-mars"></i> Gender</label>
+                <select id="tenant-gender" class="form-control-large">
+                  <option value="">Select Gender</option>
+                  <option value="male" ${tenant && tenant.gender === 'male' ? 'selected' : ''}>Male</option>
+                  <option value="female" ${tenant && tenant.gender === 'female' ? 'selected' : ''}>Female</option>
+                  <option value="other" ${tenant && tenant.gender === 'other' ? 'selected' : ''}>Other</option>
+                </select>
+              </div>
+              
+              <div class="input-group">
+                <label><i class="fas fa-calendar"></i> Age</label>
+                <input type="number" id="tenant-age" value="${tenant ? tenant.age : ''}" placeholder="Enter age">
+              </div>
+              
+              <div class="input-group">
+                <label><i class="fas fa-envelope"></i> Email ID</label>
+                <input type="email" id="tenant-email" value="${tenant ? tenant.email : ''}" placeholder="Enter email">
+              </div>
+              
+              <div class="input-group">
+                <label><i class="fas fa-phone"></i> Phone No *</label>
+                <input type="tel" id="tenant-phone" value="${tenant ? tenant.phone : ''}" placeholder="Enter phone number" required>
+              </div>
+              
+              <div class="input-group">
+                <label><i class="fas fa-briefcase"></i> Occupation</label>
+                <input type="text" id="tenant-occupation" value="${tenant ? tenant.occupation : ''}" placeholder="Enter occupation">
+              </div>
+              
+              <div class="input-group">
+                <label><i class="fas fa-money-bill"></i> Monthly Salary</label>
+                <input type="number" id="tenant-salary" value="${tenant ? tenant.salary : ''}" placeholder="Enter monthly salary">
+              </div>
+              
+              <div class="input-group">
+                <label><i class="fas fa-home"></i> Permanent Address</label>
+                <textarea id="tenant-address" class="form-textarea" placeholder="Enter permanent address">${tenant ? tenant.address : ''}</textarea>
+              </div>
+              
+              <div class="input-group">
+                <label><i class="fas fa-bed"></i> Room Type</label>
+                <select id="tenant-room-type" class="form-control-large">
+                  <option value="">Select Room Type</option>
+                  <option value="single" ${tenant && tenant.roomType === 'single' ? 'selected' : ''}>Single</option>
+                  <option value="double" ${tenant && tenant.roomType === 'double' ? 'selected' : ''}>Double</option>
+                  <option value="triple" ${tenant && tenant.roomType === 'triple' ? 'selected' : ''}>Triple</option>
+                  <option value="bhk" ${tenant && tenant.roomType === 'bhk' ? 'selected' : ''}>BHK</option>
+                </select>
+              </div>
+              
+              <div class="input-group">
+                <label><i class="fas fa-bath"></i> Washroom</label>
+                <select id="tenant-washroom" class="form-control-large">
+                  <option value="">Select Washroom Type</option>
+                  <option value="attached" ${tenant && tenant.washroom === 'attached' ? 'selected' : ''}>Attached</option>
+                  <option value="non-attached" ${tenant && tenant.washroom === 'non-attached' ? 'selected' : ''}>Non-Attached</option>
+                </select>
+              </div>
+              
+              <div class="input-group">
+                <label><i class="fas fa-calendar-alt"></i> Date of Shift</label>
+                <input type="date" id="tenant-shift-date" value="${tenant ? tenant.shiftDate : ''}">
+              </div>
+              
+              <div class="input-group">
+                <label><i class="fas fa-money-bill-wave"></i> Monthly Rent *</label>
+                <input type="number" id="tenant-rent" value="${tenant ? tenant.rent : ''}" placeholder="Enter monthly rent" required>
+              </div>
+            </div>
+            
+            <div class="form-actions">
+              <button class="print-btn" onclick="saveTenantDetails('${tenant ? tenant.id : ''}')">
+                <i class="fas fa-save"></i> ${tenant ? 'Update' : 'Save'} Tenant
+              </button>
+              <button class="btn-cancel" onclick="closeTenantForm()">
+                <i class="fas fa-times"></i> Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+
+      // Use the original method to insert the HTML
+      originalInsertAdjacentHTML.call(document.body, 'beforeend', formHtml);
+      
+      // Add the show class to make it visible
+      setTimeout(() => {
+        const overlay = document.getElementById('tenant-form-overlay');
+        if (overlay) {
+          overlay.classList.add('show');
+          overlay.setAttribute('data-user-initiated', 'true');
+        }
+        // Clear the flag after form is created
+        window.isCreatingTenantForm = false;
+      }, 10);
+    }
+
+    function closeTenantForm() {
+      const overlay = document.getElementById('tenant-form-overlay');
+      if (overlay) overlay.remove();
+    }
+
+    function saveTenantDetails(tenantId) {
+      const tenantData = {
+        name: document.getElementById('tenant-name').value,
+        gender: document.getElementById('tenant-gender').value,
+        age: document.getElementById('tenant-age').value,
+        email: document.getElementById('tenant-email').value,
+        phone: document.getElementById('tenant-phone').value,
+        occupation: document.getElementById('tenant-occupation').value,
+        salary: document.getElementById('tenant-salary').value,
+        address: document.getElementById('tenant-address').value,
+        roomType: document.getElementById('tenant-room-type').value,
+        washroom: document.getElementById('tenant-washroom').value,
+        shiftDate: document.getElementById('tenant-shift-date').value,
+        rent: parseFloat(document.getElementById('tenant-rent').value) || 0,
+        amount: parseFloat(document.getElementById('tenant-rent').value) || 0,
+        status: 'pending'
+      };
+
+      if (tenantId) {
+        // Update existing tenant
+        const index = tenants.findIndex(t => t.id === tenantId);
+        if (index !== -1) {
+          tenants[index] = { ...tenants[index], ...tenantData };
+        }
+      } else {
+        // Add new tenant
+        tenantData.id = Date.now();
+        tenants.push(tenantData);
+      }
+
+      localStorage.setItem('tenants', JSON.stringify(tenants));
+      renderTenants();
+      generateMonthsGrid(); // Update payment records
+      closeTenantForm();
+      showNotification(`Tenant ${tenantId ? 'updated' : 'added'} successfully!`, 'success');
+    }
+
+    function editTenant(id) {
+      const tenant = tenants.find(t => t.id === id);
+      if (tenant) {
+        showTenantFormSafe(tenant);
+      }
+    }
+
+    function deleteTenant(id) {
+      if (confirm('Are you sure you want to delete this tenant?')) {
+        tenants = tenants.filter(t => t.id !== id);
+        localStorage.setItem('tenants', JSON.stringify(tenants));
+        renderTenants();
+        generateMonthsGrid(); // Update payment records
+        showNotification('Tenant deleted successfully!', 'success');
+      }
+    }
+
+    // Calendar and date functions
+    let currentMonth = new Date().getMonth();
+    let currentCalendarYear = new Date().getFullYear();
+
+    function changeYear(direction) {
+      currentCalendarYear += direction;
+      updateCalendarDisplay();
+      generateMonthsGrid();
+    }
+
+    function changeMonth(direction) {
+      currentMonth += direction;
+      if (currentMonth < 0) {
+        currentMonth = 11;
+        currentCalendarYear--;
+      } else if (currentMonth > 11) {
+        currentMonth = 0;
+        currentCalendarYear++;
+      }
+      updateCalendarDisplay();
+      generateMonthsGrid();
+    }
+
+    function updateCalendarDisplay() {
+      document.getElementById('current-year').textContent = currentCalendarYear;
+      const monthElement = document.getElementById('current-month');
+      if (monthElement) {
+        monthElement.textContent = monthNames[currentMonth];
+      }
+
+      // Update calendar date input
+      const dateInput = document.getElementById('calendar-date');
+      if (dateInput) {
+        dateInput.value = `${currentCalendarYear}-${String(currentMonth + 1).padStart(2, '0')}-01`;
+      }
+    }
+
+    function updateCalendarDate() {
+      const dateInput = document.getElementById('calendar-date');
+      if (dateInput && dateInput.value) {
+        const selectedDate = new Date(dateInput.value);
+        currentMonth = selectedDate.getMonth();
+        currentCalendarYear = selectedDate.getFullYear();
+        updateCalendarDisplay();
+        generateMonthsGrid();
+      }
+    }
+
+    function showNotification(message, type = 'success') {
+      const notification = document.createElement('div');
+      notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: ${type === 'success' ? 'var(--success)' : 'var(--danger)'};
+        color: white;
+        padding: 1rem 1.5rem;
+        border-radius: 10px;
+        box-shadow: var(--shadow-lg);
+        z-index: 10000;
+        animation: slideInRight 0.3s ease-out;
+      `;
+      notification.textContent = message;
+      document.body.appendChild(notification);
+
+      setTimeout(() => {
+        notification.style.animation = 'slideOutRight 0.3s ease-out';
+        setTimeout(() => notification.remove(), 300);
+      }, 3000);
+    }
+
+    // Initialize application
+    document.addEventListener('DOMContentLoaded', function () {
+      // Initialize theme
+      document.documentElement.setAttribute('data-theme', currentTheme);
+      updateThemeIcon();
+      
+      // Ensure all essential functions exist
+      console.log('Checking function availability...');
+      const essentialFunctions = [
+        'toggleTheme', 'switchTab', 'renderTenants', 'loadAnalytics',
+        'addNewTenant', 'showTenantFormSafe', 'saveTenantDetails',
+        'generateSlip', 'printSlip', 'saveAsTenant', 'deleteSlipCard',
+        'uploadSignature', 'removeSignature', 'updateTenantName',
+        'changeViewMode', 'copyTemplate', 'shareTemplate',
+        'slideTemplates', 'selectTemplate', 'toggleNotifications',
+        'signOut', 'toggleSidebar'
+      ];
+      
+      essentialFunctions.forEach(funcName => {
+        if (typeof window[funcName] !== 'function') {
+          console.error(`Function ${funcName} not found or not a function`);
+        } else {
+          console.log(`✓ ${funcName} function available`);
+        }
+      });
+      
+      // Test button event listeners
+      console.log('Testing button event listeners...');
+      const buttons = document.querySelectorAll('button[onclick]');
+      console.log(`Found ${buttons.length} buttons with onclick handlers`);
+      
+      // Test specific functionality
+      const testFunctions = [
+        { name: 'addNewTenant', test: () => typeof addNewTenant === 'function' },
+        { name: 'generateSlip', test: () => typeof generateSlip === 'function' },
+        { name: 'printSlip', test: () => typeof printSlip === 'function' },
+        { name: 'saveAsTenant', test: () => typeof saveAsTenant === 'function' },
+        { name: 'deleteSlipCard', test: () => typeof deleteSlipCard === 'function' },
+        { name: 'uploadSignature', test: () => typeof uploadSignature === 'function' },
+        { name: 'removeSignature', test: () => typeof removeSignature === 'function' },
+        { name: 'copyTemplate', test: () => typeof copyTemplate === 'function' },
+        { name: 'shareTemplate', test: () => typeof shareTemplate === 'function' },
+        { name: 'slideTemplates', test: () => typeof slideTemplates === 'function' },
+        { name: 'selectTemplate', test: () => typeof selectTemplate === 'function' },
+        { name: 'changeViewMode', test: () => typeof changeViewMode === 'function' },
+        { name: 'changeYear', test: () => typeof changeYear === 'function' },
+        { name: 'toggleNotifications', test: () => typeof toggleNotifications === 'function' },
+        { name: 'signOut', test: () => typeof signOut === 'function' },
+        { name: 'toggleSidebar', test: () => typeof toggleSidebar === 'function' }
+      ];
+      
+      testFunctions.forEach(func => {
+        if (func.test()) {
+          console.log(`✓ ${func.name} function available`);
+        } else {
+          console.error(`✗ ${func.name} function not available`);
+        }
+      });
+      
+      // Test navigation tabs
+      const navTabsTest = document.querySelectorAll('.nav-tab');
+      console.log(`Found ${navTabsTest.length} navigation tabs`);
+      
+      // Test theme toggle
+      const themeIcon = document.getElementById('theme-icon');
+      if (themeIcon) {
+        console.log('✓ Theme icon found');
+      } else {
+        console.error('Theme icon not found');
+      }
+      
+      // Test form elements
+      const inputs = document.querySelectorAll('input');
+      console.log(`Found ${inputs.length} input elements`);
+      
+      // Test containers
+      const containers = [
+        'tenants-container',
+        'slips-container', 
+        'months-grid',
+        'analyticsStats'
+      ];
+      
+      containers.forEach(id => {
+        const element = document.getElementById(id);
+        if (element) {
+          console.log(`✓ Container ${id} found`);
+        } else {
+          console.log(`⚠ Container ${id} not found (may be created dynamically)`);
+        }
+      });
+      
+      // AGGRESSIVE: Remove any existing tenant form overlay
+      const existingOverlay = document.getElementById('tenant-form-overlay');
+      if (existingOverlay) {
+        existingOverlay.remove();
+      }
+      
+      // Setup navigation tabs
+      const navTabs = document.querySelectorAll('.nav-tab');
+      navTabs.forEach(tab => {
+        tab.addEventListener('click', function () {
+          // Remove active class from all tabs
+          navTabs.forEach(t => t.classList.remove('active'));
+          // Add active class to clicked tab
+          this.classList.add('active');
+
+          // Show selected section
+          switchTab(this.dataset.tab);
+        });
+      });
+      
+      // AGGRESSIVE: Add continuous monitoring to remove any tenant form overlays
+      setInterval(() => {
+        const overlay = document.getElementById('tenant-form-overlay');
+        if (overlay && !overlay.hasAttribute('data-user-initiated')) {
+          overlay.remove();
+          console.log('Removed tenant form overlay');
+        }
+      }, 100);
+      
+      // AGGRESSIVE: Add MutationObserver to remove any tenant form overlays that are added
+      const observer = new MutationObserver(function(mutations) {
+        mutations.forEach(function(mutation) {
+          mutation.addedNodes.forEach(function(node) {
+            if (node.nodeType === 1) {
+              if ((node.id === 'tenant-form-overlay' || node.classList?.contains('tenant-form-overlay')) && !node.hasAttribute('data-user-initiated')) {
+                node.remove();
+                console.log('MutationObserver removed tenant form overlay');
+              }
+              // Also check child nodes
+              const overlays = node.querySelectorAll ? node.querySelectorAll('#tenant-form-overlay, .tenant-form-overlay') : [];
+              overlays.forEach(function(overlay) {
+                if (!overlay.hasAttribute('data-user-initiated')) {
+                  overlay.remove();
+                  console.log('MutationObserver removed nested tenant form overlay');
+                }
+              });
+            }
+          });
+        });
+      });
+      
+      observer.observe(document.body, {
+        childList: true,
+        subtree: true
+      });
+      
+      // AGGRESSIVE: Override any attempt to show the tenant form
+      const originalInsertAdjacentHTML = Element.prototype.insertAdjacentHTML;
+      Element.prototype.insertAdjacentHTML = function(position, text) {
+        // Allow tenant form if it's user-initiated or if we're in the process of creating it safely
+        if (text.includes('tenant-form-overlay') && !text.includes('data-user-initiated') && !window.isCreatingTenantForm) {
+          console.log('Blocked attempt to insert tenant form overlay');
+          return;
+        }
+        return originalInsertAdjacentHTML.call(this, position, text);
+      };
+      
+      // Add click handler to remove any overlays that might appear
+      document.addEventListener('click', function(e) {
+        const overlay = document.getElementById('tenant-form-overlay');
+        if (overlay && !overlay.hasAttribute('data-user-initiated')) {
+          overlay.remove();
+        }
+      });
+      
+      // Set initial radio button state based on saved preference
+      const savedMode = localStorage.getItem('preferredViewMode') || 'monthly';
+      document.querySelector(`input[name="viewMode"][value="${savedMode}"]`).checked = true;
+
+      // Update radio button visual states
+      document.querySelectorAll('input[name="viewMode"]').forEach(radio => {
+        const label = radio.parentElement;
+        if (radio.value === savedMode) {
+          label.style.background = 'var(--primary)';
+          label.style.color = 'white';
+        } else {
+          label.style.background = 'white';
+          label.style.color = 'var(--primary)';
+        }
+      });
+
+      // Initialize default slip cards
+      for (let i = 1; i <= 3; i++) {
+        addNewSlipCard();
+        // Set default tenant names
+        const tenant = defaultTenants[i - 1];
+        if (tenant) {
+          const card = document.querySelector(`#slips-container .tenant-card:nth-child(${i})`);
+          if (card) {
+            const nameElement = card.querySelector('h3');
+            nameElement.textContent = tenant.name;
+            nameElement.innerHTML = `<i class="fas fa-user"></i> ${tenant.name}`;
+
+            // Update receipt name
+            const receiptNameElement = document.getElementById(`receipt${i}-name`);
+            if (receiptNameElement) {
+              receiptNameElement.textContent = tenant.name;
+            }
+
+            // Set rent amount
+            document.getElementById(`slip${i}-rent`).value = tenant.rent;
+            calculateSlipCard(i);
+          }
+        }
+      }
+
+      // Initialize signatures
+      initializeSignatures();
+
+      // Initialize default records
+      initializeDefaultRecords();
+
+      // Initialize calendar
+      updateCalendarDisplay();
+
+      // Initialize tenants
+      renderTenants();
+
+      // Initialize records and auto-update statuses
+      updatePaymentStatuses();
+
+      // Auto-update statuses every minute
+      setInterval(updatePaymentStatuses, 60000); // Update every minute
+    });
+
+    // Add notification animations
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes slideInRight {
+        from {
+          transform: translateX(100%);
+          opacity: 0;
+        }
+        to {
+          transform: translateX(0);
+          opacity: 1;
+        }
+      }
+      
+      @keyframes slideOutRight {
+        from {
+          transform: translateX(0);
+          opacity: 1;
+        }
+        to {
+          transform: translateX(100%);
+          opacity: 0;
+        }
+      }
+    `;
+    document.head.appendChild(style);
+
+    // Enhanced generateSlip function for tenant names
+    function generateSlip(cardId) {
+      const currentDate = new Date();
+      const month = currentDate.getMonth();
+      const year = currentDate.getFullYear();
+      const monthKey = `${monthNames[month]}-${year}`;
+
+      // Get tenant name from the editable field
+      const nameElement = document.getElementById(`tenant-name-${cardId}`);
+      const tenantName = nameElement ? nameElement.textContent.replace(/.*\s/, '').trim() : `Tenant ${cardId}`;
+      const isPaid = document.getElementById(`paid${cardId}`).checked;
+
+      const record = {
+        tenantName: tenantName,
+        current: parseFloat(document.getElementById(`slip${cardId}-current`).value) || 0,
+        previous: parseFloat(document.getElementById(`slip${cardId}-previous`).value) || 0,
+        rent: parseFloat(document.getElementById(`slip${cardId}-rent`).value) || 0,
+        waterUnits: parseFloat(document.getElementById(`slip${cardId}-water`).value) || 0,
+        waterRate: parseFloat(document.getElementById(`slip${cardId}-water-rate`).value) || 0,
+        otherUnits: parseFloat(document.getElementById(`slip${cardId}-other-units`).value) || 0,
+        otherRate: parseFloat(document.getElementById(`slip${cardId}-other-rate`).value) || 0,
+        paid: isPaid,
+        date: currentDate.toLocaleDateString(),
+        total: parseFloat(document.getElementById(`slip${cardId}-total`).textContent.replace(/[^0-9.]/g, '')) || 0,
+        status: isPaid ? 'paid' : 'unpaid'
+      };
+
+      // Initialize month if not exists
+      if (!records[monthKey]) {
+        records[monthKey] = [];
+      }
+
+      // Remove existing record for this tenant if exists
+      records[monthKey] = records[monthKey].filter(r => r.tenantName !== tenantName);
+
+      // Save new record
+      records[monthKey].push(record);
+      localStorage.setItem('rentRecords', JSON.stringify(records));
+
+      // Update tenant dashboard if tenant exists
+      const existingTenant = tenants.find(t => t.name === tenantName);
+      if (existingTenant) {
+        existingTenant.status = record.status;
+        existingTenant.amount = record.total;
+        localStorage.setItem('tenants', JSON.stringify(tenants));
+        renderTenants();
+      }
+
+      // Refresh records display
+      generateMonthsGrid();
+
+      // Show success notification
+      showNotification(`Record saved for ${tenantName} - ${monthNames[month]} ${year}`, 'success');
+    }
+
+    // Enhanced printSlip function with property owner signature
+    function printSlip(cardId) {
+      const slipContent = document.getElementById(`receipt${cardId}`).innerHTML;
+      const ownerSignatureImg = document.getElementById(`receipt${cardId}-signature-img`);
+      const originalContent = document.body.innerHTML;
+
+      // Get owner signature source if it exists
+      const ownerSignatureSrc = ownerSignatureImg && ownerSignatureImg.src ? ownerSignatureImg.src : '';
+
+      document.body.innerHTML = `
+        <style>
+          @media print {
+            body {
+              font-family: 'Inter', sans-serif;
+              padding: 20px;
+              background: var(--card-bg);
+            }
+            .receipt {
+              max-width: 400px;
+              margin: 0 auto;
+              border: 2px solid var(--primary);
+              padding: 20px;
+              border-radius: 15px;
+              background: var(--card-bg);
+            }
+            h2 {
+              text-align: center;
+              color: var(--primary);
+              margin-top: 0;
+              font-size: 1.5rem;
+            }
+            p {
+              margin: 10px 0;
+              display: flex;
+              justify-content: space-between;
+              font-size: 0.9rem;
+            }
+            .total {
+              font-weight: bold;
+              font-size: 1.2em;
+              margin-top: 20px;
+              padding-top: 10px;
+              border-top: 1px dashed var(--primary);
+              color: var(--primary);
+            }
+            .signatures {
+              margin-top: 40px;
+              display: flex;
+              justify-content: space-between;
+            }
+            .signature-box {
+              text-align: center;
+              width: 45%;
+            }
+            .signature-line {
+              border-bottom: 1px solid #333;
+              margin-top: 30px;
+              padding-bottom: 5px;
+            }
+            .owner-signature-print {
+              height: 60px;
+              max-width: 200px;
+              margin-bottom: 0.5rem;
+            }
+          }
+        </style>
+        <div class="receipt">
+          <h2>RENT PAYMENT RECEIPT</h2>
+          <div>${slipContent}</div>
+          <div class="signatures">
+            <div class="signature-box">
+              <p>Property Owner Signature</p>
+              ${ownerSignatureSrc ? `<img src="${ownerSignatureSrc}" class="owner-signature-print" alt="Owner Signature">` : '<div class="signature-line" id="print-owner-signature"></div>'}
+            </div>
+            <div class="signature-box">
+              <p>Tenant Signature</p>
+              <div class="signature-line"></div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      window.print();
+      document.body.innerHTML = originalContent;
+
+      // Re-initialize event listeners after restoring content
+      location.reload();
+    }
+
+    // Initialize view mode from saved preference
+    let currentViewMode = localStorage.getItem('preferredViewMode') || 'monthly';
+
+    // View mode switching with radio buttons
+    function changeViewMode(mode) {
+      currentViewMode = mode;
+
+      // Update radio button states
+      document.querySelectorAll('input[name="viewMode"]').forEach(radio => {
+        const label = radio.parentElement;
+        if (radio.value === mode) {
+          label.style.background = 'var(--primary)';
+          label.style.color = 'white';
+        } else {
+          label.style.background = 'white';
+          label.style.color = 'var(--primary)';
+        }
+      });
+
+      // Refresh display
+      generateMonthsGrid();
+
+      // Save selected mode preference
+      localStorage.setItem('preferredViewMode', mode);
+
+      // Show notification
+      showNotification(`Switched to ${mode} view`, 'info');
+    }
+
+    function changeYear(offset) {
+      currentYear += offset;
+      document.getElementById('current-year').textContent = currentYear;
+      generateMonthsGrid();
+    }
+
+    // Auto-update payment status based on dates
+    function updatePaymentStatuses() {
+      const currentDate = new Date();
+      const currentMonth = currentDate.getMonth();
+      const currentYear = currentDate.getFullYear();
+
+      Object.keys(records).forEach(monthKey => {
+        const [monthName, year] = monthKey.split('-');
+        const monthIndex = monthNames.indexOf(monthName);
+
+        if (records[monthKey]) {
+          records[monthKey].forEach(record => {
+            if (record.tenantName) {
+              const paymentDate = new Date(record.date);
+              const dueDate = new Date(year, monthIndex, 1); // 1st of month
+              const daysLate = Math.floor((paymentDate - dueDate) / (1000 * 60 * 60 * 24));
+
+              // Auto-update status based on payment date
+              if (record.paid || daysLate <= 0) {
+                record.status = 'paid';
+              } else if (daysLate <= 2) {
+                record.status = 'pending';
+              } else {
+                record.status = 'late';
+              }
+            }
+          });
+        }
+      });
+
+      localStorage.setItem('rentRecords', JSON.stringify(records));
+      generateMonthsGrid();
+    }
+
+    function generateMonthsGrid() {
+      const container = document.getElementById('months-grid');
+      if (!container) return;
+
+      container.innerHTML = '';
+
+      if (currentViewMode === 'monthly') {
+        // Monthly view
+        monthNames.forEach((month, index) => {
+          const monthCard = document.createElement('div');
+          monthCard.className = 'month-card animate-on-scroll';
+
+          const monthKey = `${month}-${currentYear}`;
+          const monthRecords = records[monthKey] || [];
+
+          let recordsHtml = '';
+          tenants.forEach(tenant => {
+            const tenantRecord = monthRecords.find(r => r.tenantName === tenant.name);
+            const status = tenantRecord ? tenantRecord.status : 'unpaid';
+            const amount = tenantRecord ? (tenantRecord.amount || 0) : tenant.rent;
+            const paymentDate = tenantRecord ? tenantRecord.date : '';
+
+            recordsHtml += `
+              <div class="payment-record-item">
+                <div class="tenant-name">${tenant.name}</div>
+                <div class="payment-amount">₹${amount.toFixed(2)}</div>
+                ${paymentDate && status === 'paid' ? `<div class="payment-date paid-date">${paymentDate}</div>` : ''}
+                <div class="payment-status status-${status}">${status.toUpperCase()}</div>
+              </div>
+            `;
+          });
+
+          monthCard.innerHTML = `
+            <h3>${month}</h3>
+            <div class="payment-records-list">
+              ${recordsHtml || '<p class="empty-state">No records</p>'}
+            </div>
+          `;
+
+          container.appendChild(monthCard);
+        });
+      } else if (currentViewMode === 'quarterly') {
+        // Quarterly view
+        const quarters = ['Q1 (Jan-Mar)', 'Q2 (Apr-Jun)', 'Q3 (Jul-Sep)', 'Q4 (Oct-Dec)'];
+        quarters.forEach((quarter, qIndex) => {
+          const quarterCard = document.createElement('div');
+          quarterCard.className = 'month-card animate-on-scroll';
+
+          let recordsHtml = '';
+          tenants.forEach(tenant => {
+            let quarterTotal = 0;
+            let quarterStatus = 'unpaid';
+            let paymentDates = [];
+
+            for (let m = qIndex * 3; m < (qIndex + 1) * 3 && m < 12; m++) {
+              const monthKey = `${monthNames[m]}-${currentYear}`;
+              const monthRecords = records[monthKey] || [];
+              const tenantRecord = monthRecords.find(r => r.tenantName === tenant.name);
+
+              if (tenantRecord) {
+                quarterTotal += (tenantRecord.amount || 0);
+                if (tenantRecord.status === 'paid') {
+                  paymentDates.push(tenantRecord.date);
+                }
+              }
+            }
+
+            quarterStatus = paymentDates.length > 0 ? 'paid' : 'unpaid';
+
+            recordsHtml += `
+              <div class="payment-record-item">
+                <div class="tenant-name">${tenant.name}</div>
+                <div class="payment-amount">₹${quarterTotal.toFixed(2)}</div>
+                ${paymentDates.length > 0 ? `<div class="payment-date paid-date">${paymentDates[paymentDates.length - 1]}</div>` : ''}
+                <div class="payment-status status-${quarterStatus}">${quarterStatus.toUpperCase()}</div>
+              </div>
+            `;
+          });
+
+          quarterCard.innerHTML = `
+            <h3>${quarter}</h3>
+            <div class="payment-records-list">
+              ${recordsHtml || '<p class="empty-state">No records</p>'}
+            </div>
+          `;
+
+          container.appendChild(quarterCard);
+        });
+      } else if (currentViewMode === 'yearly') {
+        // Yearly view
+        const yearCard = document.createElement('div');
+        yearCard.className = 'month-card animate-on-scroll';
+
+        let recordsHtml = '';
+        tenants.forEach(tenant => {
+          let yearTotal = 0;
+          let yearStatus = 'unpaid';
+          let paymentDates = [];
+
+          monthNames.forEach((month, mIndex) => {
+            const monthKey = `${month}-${currentYear}`;
+            const monthRecords = records[monthKey] || [];
+            const tenantRecord = monthRecords.find(r => r.tenantName === tenant.name);
+
+            if (tenantRecord) {
+              yearTotal += (tenantRecord.amount || 0);
+              if (tenantRecord.status === 'paid') {
+                paymentDates.push(tenantRecord.date);
+              }
+            }
+          });
+
+          yearStatus = paymentDates.length > 0 ? 'paid' : 'unpaid';
+
+          recordsHtml += `
+            <div class="payment-record-item">
+              <div class="tenant-name">${tenant.name}</div>
+              <div class="payment-amount">₹${yearTotal.toFixed(2)}</div>
+              ${paymentDates.length > 0 ? `<div class="payment-date paid-date">${paymentDates[paymentDates.length - 1]}</div>` : ''}
+              <div class="payment-status status-${yearStatus}">${yearStatus.toUpperCase()}</div>
+            </div>
+          `;
+        });
+
+        yearCard.innerHTML = `
+          <h3>${currentYear} Summary</h3>
+          <div class="payment-records-list">
+            ${recordsHtml || '<p class="empty-state">No records</p>'}
+          </div>
+        `;
+
+        container.appendChild(yearCard);
+      }
+
+      // Re-observe new elements
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('visible');
+          }
+        });
+      }, { threshold: 0.1 });
+
+      document.querySelectorAll('.month-card').forEach(card => {
+        observer.observe(card);
+      });
+    }
+
+    // Signature upload functions
+    function uploadSignature(cardId) {
+      const fileInput = document.getElementById(`slip${cardId}-signature-upload`);
+      const signatureImg = document.getElementById(`slip${cardId}-signature`);
+      const receiptSignatureImg = document.getElementById(`receipt${cardId}-signature-img`);
+      const placeholder = document.getElementById(`receipt${cardId}-signature-placeholder`);
+
+      if (fileInput.files && fileInput.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function (e) {
+          const signatureData = e.target.result;
+
+          // Update both signature displays
+          signatureImg.src = signatureData;
+          signatureImg.style.display = 'block';
+
+          receiptSignatureImg.src = signatureData;
+          receiptSignatureImg.style.display = 'block';
+          placeholder.style.display = 'none';
+
+          // Save to localStorage
+          localStorage.setItem(`signature_${cardId}`, signatureData);
+
+          showNotification('Signature uploaded successfully!', 'success');
+        };
+        reader.readAsDataURL(fileInput.files[0]);
+      }
+    }
+
+    function removeSignature(cardId) {
+      const signatureImg = document.getElementById(`slip${cardId}-signature`);
+      const receiptSignatureImg = document.getElementById(`receipt${cardId}-signature-img`);
+      const placeholder = document.getElementById(`receipt${cardId}-signature-placeholder`);
+      const fileInput = document.getElementById(`slip${cardId}-signature-upload`);
+
+      // Clear all signature displays
+      signatureImg.src = '';
+      signatureImg.style.display = 'none';
+
+      receiptSignatureImg.src = '';
+      receiptSignatureImg.style.display = 'none';
+      placeholder.style.display = 'flex';
+
+      // Clear file input
+      fileInput.value = '';
+
+      // Remove from localStorage
+      localStorage.removeItem(`signature_${cardId}`);
+
+      showNotification('Signature removed!', 'info');
+    }
+
+    function initializeSignatures() {
+      // Load saved signatures for all cards
+      for (let i = 1; i <= 10; i++) {
+        const savedSignature = localStorage.getItem(`signature_${i}`);
+        if (savedSignature) {
+          const signatureImg = document.getElementById(`slip${i}-signature`);
+          const receiptSignatureImg = document.getElementById(`receipt${i}-signature-img`);
+          const placeholder = document.getElementById(`receipt${i}-signature-placeholder`);
+
+          if (signatureImg) {
+            signatureImg.src = savedSignature;
+            signatureImg.style.display = 'block';
+          }
+
+          if (receiptSignatureImg) {
+            receiptSignatureImg.src = savedSignature;
+            receiptSignatureImg.style.display = 'block';
+          }
+
+          if (placeholder) {
+            placeholder.style.display = 'none';
+          }
+        }
+      }
+    }
+
+    function initializeDefaultRecords() {
+      // Create default records for current month if none exist
+      const currentDate = new Date();
+      const monthKey = `${monthNames[currentDate.getMonth()]}-${currentDate.getFullYear()}`;
+
+      if (!records[monthKey] || records[monthKey].length === 0) {
+        records[monthKey] = [];
+
+        defaultTenants.forEach(tenant => {
+          const record = {
+            tenantName: tenant.name,
+            current: 0,
+            previous: 0,
+            rent: tenant.rent,
+            waterUnits: 0,
+            waterRate: 0,
+            otherUnits: 0,
+            otherRate: 0,
+            paid: tenant.status === 'paid',
+            date: currentDate.toLocaleDateString(),
+            total: tenant.rent,
+            status: tenant.status
+          };
+          records[monthKey].push(record);
+        });
+
+        localStorage.setItem('rentRecords', JSON.stringify(records));
+      }
+    }
+
+    // Notification system
+    function showNotification(message, type = 'info') {
+      const notification = document.createElement('div');
+      notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: ${type === 'success' ? 'var(--success)' : 'var(--danger)'};
+        color: white;
+        padding: 1rem 1.5rem;
+        border-radius: 10px;
+        box-shadow: var(--shadow-lg);
+        z-index: 10000;
+        animation: slideInRight 0.3s ease-out;
+      `;
+      notification.textContent = message;
+      document.body.appendChild(notification);
+
+      setTimeout(() => {
+        notification.style.animation = 'slideOutRight 0.3s ease-out';
+        setTimeout(() => notification.remove(), 300);
+      }, 3000);
+    }
+
+    // Template Carousel Functions
+    let currentSlide = 0;
+    const totalSlides = 4;
+
+    function slideTemplates(direction) {
+      const container = document.querySelector('.template-container');
+      const dots = document.querySelectorAll('.dot');
+      const cards = document.querySelectorAll('.template-card');
+
+      currentSlide += direction;
+
+      if (currentSlide < 0) {
+        currentSlide = totalSlides - 1;
+      } else if (currentSlide >= totalSlides) {
+        currentSlide = 0;
+      }
+
+      updateCarousel();
+    }
+
+    function goToSlide(slideIndex) {
+      currentSlide = slideIndex;
+      updateCarousel();
+    }
+
+    function updateCarousel() {
+      const container = document.querySelector('.template-container');
+      const dots = document.querySelectorAll('.dot');
+      const cards = document.querySelectorAll('.template-card');
+
+      // Calculate the transform value
+      const cardWidth = 280; // min-width of template-card
+      const gap = 32; // gap between cards (2rem = 32px)
+      const offset = -(currentSlide * (cardWidth + gap));
+
+      container.style.transform = `translateX(${offset}px)`;
+
+      // Update dots
+      dots.forEach((dot, index) => {
+        dot.classList.toggle('active', index === currentSlide);
+      });
+
+      // Update active card
+      cards.forEach((card, index) => {
+        card.classList.toggle('active', index === currentSlide);
+      });
+    }
+
+    function selectTemplate(templateType) {
+      const templates = {
+        welcome: {
+          title: 'Welcome Template',
+          message: 'Welcome template selected! This template is perfect for new tenants.',
+          icon: 'fa-hand-wave'
+        },
+        warning: {
+          title: 'Late Payment Warning',
+          message: 'Warning template selected! Send professional payment reminders.',
+          icon: 'fa-exclamation-triangle'
+        },
+        feedback: {
+          title: 'Feedback Survey',
+          message: 'Feedback template selected! Collect valuable tenant insights.',
+          icon: 'fa-comment-dots'
+        },
+        maintenance: {
+          title: 'Maintenance Notice',
+          message: 'Maintenance template selected! Inform tenants about scheduled work.',
+          icon: 'fa-tools'
+        }
+      };
+
+      const template = templates[templateType];
+      showNotification(`${template.title} - ${template.message}`, 'success');
+
+      // Add visual feedback
+      const selectedCard = document.querySelector(`[data-template="${templateType}"]`);
+      selectedCard.style.animation = 'pulse 0.5s ease';
+      setTimeout(() => {
+        selectedCard.style.animation = '';
+      }, 500);
+    }
+
+    // Auto-slide functionality
+    let autoSlideInterval;
+
+    function startAutoSlide() {
+      autoSlideInterval = setInterval(() => {
+        slideTemplates(1);
+      }, 5000); // Change slide every 5 seconds
+    }
+
+    function stopAutoSlide() {
+      clearInterval(autoSlideInterval);
+    }
+
+    // Pause auto-slide on hover
+    document.addEventListener('DOMContentLoaded', function () {
+      const carousel = document.querySelector('.template-carousel');
+
+      if (carousel) {
+        carousel.addEventListener('mouseenter', stopAutoSlide);
+        carousel.addEventListener('mouseleave', startAutoSlide);
+
+        // Start auto-slide
+        startAutoSlide();
+
+        // Touch/swipe support for mobile
+        let touchStartX = 0;
+        let touchEndX = 0;
+
+        carousel.addEventListener('touchstart', (e) => {
+          touchStartX = e.changedTouches[0].screenX;
+        });
+
+        carousel.addEventListener('touchend', (e) => {
+          touchEndX = e.changedTouches[0].screenX;
+          handleSwipe();
+        });
+
+        function handleSwipe() {
+          const swipeThreshold = 50;
+          const diff = touchStartX - touchEndX;
+
+          if (Math.abs(diff) > swipeThreshold) {
+            if (diff > 0) {
+              slideTemplates(1); // Swipe left, go to next
+            } else {
+              slideTemplates(-1); // Swipe right, go to previous
+            }
+          }
+        }
+      }
+    });
+
+    // Template Copy/Share Functionality
+    const templateTexts = {
+      welcome: "Welcome to your new home! We're excited to have you as part of our community. If you have any questions or need assistance, please don't hesitate to reach out.",
+      warning: "This is a friendly reminder that your rent payment for this month is overdue. Please make payment at your earliest convenience to avoid late fees.",
+      feedback: "We value your feedback! Please take a moment to share your thoughts about your living experience with us.",
+      maintenance: "We've received your maintenance request and our team will address it shortly. Thank you for your patience."
+    };
+
+    window.copyTemplate = function (templateName) {
+      const text = templateTexts[templateName];
+      if (!text) return;
+
+      navigator.clipboard.writeText(text).then(() => {
+        showNotification('Template copied to clipboard!', 'success');
+      }).catch(() => {
+        showNotification('Failed to copy template', 'error');
+      });
+    };
+
+    window.shareTemplate = function (templateName) {
+      const text = templateTexts[templateName];
+      if (!text) return;
+
+      // Create share modal
+      const modal = document.createElement('div');
+      modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0,0,0,0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 5000;
+      `;
+
+      modal.innerHTML = `
+        <div class="modal-card">
+          <h3 class="modal-title">Share Template</h3>
+          <p class="modal-description">Copy the link or send directly to a tenant</p>
+          <textarea readonly class="share-textarea">${text}</textarea>
+          <div class="flex-col-gap">
+            <div class="flex-gap-half">
+              <button onclick="navigator.clipboard.writeText('${text}'); showNotification('Copied!', 'success');" class="btn-gradient">
+                <i class="fas fa-copy"></i> Copy Link
+              </button>
+              <button onclick="sendNotificationToTenants('${templateName}', '${text}'); this.closest('div').closest('div').closest('div').remove();" class="btn-success-primary">
+                <i class="fas fa-paper-plane"></i> Send to Tenant
+              </button>
+            </div>
+            <button onclick="this.closest('div').closest('div').closest('div').remove();" class="btn-cancel-modal-full">
+              Close
+            </button>
+          </div>
+        </div>
+      `;
+
+      document.body.appendChild(modal);
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) modal.remove();
+      });
+    };
+
+    // Socket.IO Notification Integration
+    const socket = io();
+
+    // Listen for incoming notifications from server
+    socket.on('notification', (data) => {
+      showNotification(`${data.title}: ${data.message}`, 'info');
+    });
+
+    // Function to send notifications from owner to tenants
+    window.sendNotificationToTenants = function (type, message) {
+      let title = 'Notification';
+      if (type === 'welcome') title = 'Welcome!';
+      if (type === 'warning') title = 'Important Notice';
+      if (type === 'feedback') title = 'Feedback Request';
+      if (type === 'maintenance') title = 'Maintenance Update';
+
+      socket.emit('sendNotification', {
+        title: title,
+        message: message,
+        role: 'owner' // Indicates who is sending
+      });
+      showNotification('Notification sent to tenants', 'success');
+    };
+
+    // Add pulse animation
+
+    const pulseStyle = document.createElement('style');
+    pulseStyle.textContent = `
+      @keyframes pulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+        100% { transform: scale(1); }
+      }
+    `;
+    document.head.appendChild(pulseStyle);
+
+    function signOut() {
+      if (window.signOutUserAction) {
+        window.signOutUserAction();
+      } else {
+        window.location.href = 'landing.html';
+      }
+    }
+
+    // Sidebar Toggle Function
+    function toggleSidebar() {
+      const sidebar = document.getElementById('sidebar');
+      sidebar.classList.toggle('active');
+    }
+  </script>
+  <!-- Footer -->
+  <footer class="footer-main">
+    <div class="footer-content">
+      <p>&copy; 2026 Rentiva. All rights reserved. Made with ❤️ for property managers.</p>
+    </div>
+  </footer>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="chat-widget.js"></script>
+
+  <script src="majestic-theme.js"></script>
+</body>
+
+</html>

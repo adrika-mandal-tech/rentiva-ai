@@ -1,0 +1,72 @@
+/* RENTIVA.ai Unified Gradient System - Works in both light and dark themes */
+:root {
+  --rentiva-gradient-primary: linear-gradient(135deg, #06b6d4 0%, #0ea5e9 50%, #eab308 100%);
+  --rentiva-gradient-secondary: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  --rentiva-gradient-accent: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  --rentiva-gradient-success: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+  --rentiva-gradient-warning: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+  --rentiva-gradient-dark: linear-gradient(135deg, #30cfd0 0%, #330867 100%);
+  
+  /* Light theme colors */
+  --rentiva-text-primary: #1f2937;
+  --rentiva-text-secondary: #6b7280;
+  --rentiva-bg-primary: #ffffff;
+  --rentiva-bg-secondary: #f9fafb;
+  --rentiva-border: #e5e7eb;
+}
+
+/* Dark theme colors */
+body[data-theme="dark"] {
+  --rentiva-text-primary: #f9fafb;
+  --rentiva-text-secondary: #9ca3af;
+  --rentiva-bg-primary: #1f2937;
+  --rentiva-bg-secondary: #111827;
+  --rentiva-border: #374151;
+}
+
+/* RENTIVA.ai Heading Styles */
+.rentiva-heading {
+  background: var(--rentiva-gradient-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  color: transparent;
+  font-weight: 700;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.rentiva-heading-secondary {
+  background: var(--rentiva-gradient-secondary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  color: transparent;
+  font-weight: 600;
+}
+
+.rentiva-heading-accent {
+  background: var(--rentiva-gradient-accent);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  color: transparent;
+  font-weight: 600;
+}
+
+/* Fallback for browsers that don't support text gradients */
+@supports (not (-webkit-background-clip: text)) or (not (background-clip: text)) {
+  .rentiva-heading {
+    background: var(--rentiva-gradient-primary);
+    color : #ffffff;
+  } 
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .rentiva-heading {
+    font-size: 1.5rem;
+    padding: 0.25rem 0.75rem;
+    border-radius: 0.5rem;
+    display: inline-block;
+  }
+}

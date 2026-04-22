@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pricing & Policies - RENTIVA.ai</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --primary: #818cf8;
+            --primary-dark: #6366f1;
+            --gradient: linear-gradient(135deg, #06b6d4 0%, #0ea5e9 50%, #eab308 100%);
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #0f172a;
+            color: #f8fafc;
+            overflow-x: hidden;
+        }
+
+        .glass-nav {
+            background: rgba(15, 23, 42, 0.85);
+            -webkit-backdrop-filter: blur(12px);
+            backdrop-filter: blur(12px);
+        }
+
+        .text-gradient {
+            background: var(--gradient);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            color: transparent; /* Fallback for non-webkit */
+        }
+
+        .pricing-card {
+            background: rgba(30, 41, 59, 0.6);
+            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .pricing-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--primary);
+            box-shadow: 0 20px 40px -10px rgba(99, 102, 241, 0.3);
+        }
+
+        .pricing-card.premium {
+            background: linear-gradient(to bottom, rgba(99, 102, 241, 0.15), rgba(30, 41, 59, 0.8));
+            border: 1px solid rgba(99, 102, 241, 0.4);
+        }
+
+        .policy-section {
+            background: rgba(30, 41, 59, 0.4);
+            border-left: 4px solid var(--primary);
+        }
+    </style>
+</head>
+
+<body class="antialiased selection:bg-indigo-500 selection:text-white">
+
+    <!-- Navigation -->
+    <nav class="fixed w-full top-0 z-50 glass-nav border-b border-white/10">
+        <div class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
+            <a href="landing.html" class="text-2xl font-extrabold text-gradient flex items-center gap-2">
+                <i class="fas fa-building text-indigo-500"></i> RENTIVA.ai
+            </a>
+            <div class="hidden md:flex gap-8 items-center text-sm font-medium">
+                <a href="landing.html#features" class="hover:text-indigo-400 transition-colors">Features</a>
+                <a href="landing.html#how-it-works" class="hover:text-indigo-400 transition-colors">How it Works</a>
+                <a href="pricing.html" class="text-indigo-400">Pricing & Policies</a>
+                <a href="landing.html"
+                    class="px-5 py-2 rounded-full bg-indigo-600 hover:bg-indigo-500 transition-colors text-white shadow-lg shadow-indigo-500/25">Get
+                    Started</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="pt-32 pb-20 px-6 max-w-7xl mx-auto text-center">
+        <h1 class="text-4xl md:text-5xl font-extrabold mb-6">Simple, Transparent <span
+                class="text-gradient">Pricing</span></h1>
+        <p class="text-lg text-slate-400 max-w-2xl mx-auto">Choose the perfect plan for your property management needs.
+            No hidden fees, cancel anytime.</p>
+    </section>
+
+    <!-- Pricing Cards -->
+    <section class="max-w-7xl mx-auto px-6 pb-24">
+        <div class="grid md:grid-cols-3 gap-8">
+
+            <!-- Basic Plan -->
+            <div class="pricing-card rounded-3xl p-8 flex flex-col">
+                <h3 class="text-xl font-bold text-slate-300">Basic</h3>
+                <div class="mt-4 mb-8 flex items-end gap-2">
+                    <span class="text-4xl font-extrabold">₹0</span>
+                    <span class="text-slate-400 mb-1">/ forever</span>
+                </div>
+                <ul class="flex flex-col gap-4 text-sm text-slate-300 mb-8 flex-1">
+                    <li class="flex items-center gap-3"><i class="fas fa-check text-indigo-400"></i> Up to 2 Properties
+                    </li>
+                    <li class="flex items-center gap-3"><i class="fas fa-check text-indigo-400"></i> Basic Rent Tracking
+                    </li>
+                    <li class="flex items-center gap-3"><i class="fas fa-check text-indigo-400"></i> Tenant Portal
+                        Access</li>
+                    <li class="flex items-center gap-3 opacity-50"><i class="fas fa-times text-slate-500"></i> AI
+                        Assistant</li>
+                </ul>
+                <button
+                    class="w-full py-3 rounded-xl border border-white/20 hover:bg-white/5 transition-colors font-medium">Get
+                    Started Free</button>
+            </div>
+
+            <!-- Pro Plan -->
+            <div class="pricing-card premium rounded-3xl p-8 flex flex-col relative overflow-hidden">
+                <div class="absolute top-0 right-0 bg-indigo-500 text-xs font-bold px-3 py-1 rounded-bl-lg">POPULAR
+                </div>
+                <h3 class="text-xl font-bold text-indigo-300">Pro</h3>
+                <div class="mt-4 mb-8 flex items-end gap-2">
+                    <span class="text-4xl font-extrabold">₹499</span>
+                    <span class="text-slate-400 mb-1">/ month</span>
+                </div>
+                <ul class="flex flex-col gap-4 text-sm text-slate-300 mb-8 flex-1">
+                    <li class="flex items-center gap-3"><i class="fas fa-check text-indigo-400"></i> Up to 20 Properties
+                    </li>
+                    <li class="flex items-center gap-3"><i class="fas fa-check text-indigo-400"></i> Real-time Chat &
+                        Notifications</li>
+                    <li class="flex items-center gap-3"><i class="fas fa-check text-indigo-400"></i> Razorpay Payment
+                        Integration</li>
+                    <li class="flex items-center gap-3"><i class="fas fa-check text-indigo-400"></i> Standard AI
+                        Assistant</li>
+                </ul>
+                <button
+                    class="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 shadow-lg shadow-indigo-500/25 transition-colors font-medium">Upgrade
+                    to Pro</button>
+            </div>
+
+            <!-- Enterprise Plan -->
+            <div class="pricing-card rounded-3xl p-8 flex flex-col">
+                <h3 class="text-xl font-bold text-slate-300">Enterprise</h3>
+                <div class="mt-4 mb-8 flex items-end gap-2">
+                    <span class="text-4xl font-extrabold">Custom</span>
+                </div>
+                <ul class="flex flex-col gap-4 text-sm text-slate-300 mb-8 flex-1">
+                    <li class="flex items-center gap-3"><i class="fas fa-check text-indigo-400"></i> Unlimited
+                        Properties</li>
+                    <li class="flex items-center gap-3"><i class="fas fa-check text-indigo-400"></i> Custom Branding
+                    </li>
+                    <li class="flex items-center gap-3"><i class="fas fa-check text-indigo-400"></i> Dedicated Account
+                        Manager</li>
+                    <li class="flex items-center gap-3"><i class="fas fa-check text-indigo-400"></i> Advanced Priority
+                        Support</li>
+                </ul>
+                <button
+                    class="w-full py-3 rounded-xl border border-white/20 hover:bg-white/5 transition-colors font-medium">Contact
+                    Sales</button>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- Legal & Policies Section -->
+    <section class="max-w-4xl mx-auto px-6 pb-24">
+        <div class="text-center mb-16">
+            <h2 class="text-3xl font-bold mb-4">Legal & <span class="text-gradient">Policies</span></h2>
+            <div class="h-1 w-20 bg-indigo-600 mx-auto rounded-full"></div>
+        </div>
+
+        <div class="space-y-12">
+
+            <!-- Terms & Conditions -->
+            <div class="policy-section p-6 rounded-2xl">
+                <h3 class="text-xl font-bold mb-3 flex items-center gap-3"><i
+                        class="fas fa-file-contract text-indigo-400"></i> Terms and Conditions</h3>
+                <div class="text-sm text-slate-400 space-y-3">
+                    <p>By using RENTIVA.ai, you agree to comply with our platform's terms of service. Our platform
+                        connects property owners and tenants, facilitating rent payments, messaging, and property
+                        management tools.</p>
+                    <p>Users must ensure all information provided is accurate. We reserve the right to suspend or
+                        terminate accounts found violating our policies or engaging in fraudulent activities.</p>
+                </div>
+            </div>
+
+            <!-- Payment & Integration Adherence -->
+            <div class="policy-section p-6 rounded-2xl">
+                <h3 class="text-xl font-bold mb-3 flex items-center gap-3"><i
+                        class="fas fa-credit-card text-indigo-400"></i> Payment Integration Adherence</h3>
+                <div class="text-sm text-slate-400 space-y-3">
+                    <p>All rent payments processed through RENTIVA.ai are secured via Razorpay Payment Gateway. We do
+                        not store your raw credit card or UPI PIN data on our servers.</p>
+                    <p>By initiating a payment, you agree to Razorpay's terms of service. Tenants are responsible for
+                        ensuring sufficient funds before transaction initiation. Standard payment gateway processing
+                        fees may apply as dictated by the payment provider.</p>
+                </div>
+            </div>
+
+            <!-- Return & Refund Policy -->
+            <div class="policy-section p-6 rounded-2xl">
+                <h3 class="text-xl font-bold mb-3 flex items-center gap-3"><i class="fas fa-undo text-indigo-400"></i>
+                    Return & Refund Policy</h3>
+                <div class="text-sm text-slate-400 space-y-3">
+                    <p><strong>Subscription Refunds:</strong> RENTIVA.ai subscription fees (Pro plans) are
+                        non-refundable once the billing cycle has started. You may cancel your subscription at any time
+                        to prevent future billing.</p>
+                    <p><strong>Rent Payment Refunds:</strong> RENTIVA.ai acts solely as a facilitator for rent
+                        transfers. Any disputes regarding rent overpayment, returns, or refunds for the actual rental
+                        property must be resolved directly between the Tenant and the Property Owner. If a technical
+                        error occurs during routing via Razorpay, it will be automatically refunded to the source
+                        account within 5-7 business days.</p>
+                </div>
+            </div>
+
+            <!-- Privacy Policy -->
+            <div class="policy-section p-6 rounded-2xl">
+                <h3 class="text-xl font-bold mb-3 flex items-center gap-3"><i
+                        class="fas fa-user-shield text-indigo-400"></i> Privacy Policy</h3>
+                <div class="text-sm text-slate-400 space-y-3">
+                    <p>We take your privacy seriously. Personal information (such as phone numbers, emails, and chat
+                        messages) is encrypted. Phone numbers used for contact syncing are strictly hashed securely
+                        using SHA-256 protocols before leaving your device.</p>
+                    <p>We do not sell your personal data to third parties. Data is solely used to provide the RENTIVA.ai
+                        service suite, AI assistance, and payment processing capabilities.</p>
+                </div>
+            </div>
+
+            <!-- Disclaimer -->
+            <div class="policy-section p-6 rounded-2xl">
+                <h3 class="text-xl font-bold mb-3 flex items-center gap-3"><i
+                        class="fas fa-exclamation-triangle text-indigo-400"></i> Disclaimer</h3>
+                <div class="text-sm text-slate-400 space-y-3">
+                    <p>RENTIVA.ai provides tools for property management but does not act as a real estate agent,
+                        broker, or legal advisor. The AI Assistant generates helpful suggestions based on standard
+                        practices, but its outputs should not be construed as legally binding advice.</p>
+                    <p>Always consult with localized legal counsel for binding lease agreements or eviction procedures.
+                    </p>
+                </div>
+            </div>
+
+            <!-- About / Contact -->
+            <div class="policy-section p-6 rounded-2xl border-indigo-500 bg-indigo-900/20">
+                <h3 class="text-xl font-bold mb-3 flex items-center gap-3"><i
+                        class="fas fa-envelope text-indigo-400"></i> About & Contact Us</h3>
+                <div class="text-sm text-slate-300 space-y-3">
+                    <p>RENTIVA.ai was founded with the mission to bridge the communication and management gap between
+                        landlords and modern tenants using AI integration and seamless real-time technology.</p>
+                    <div class="mt-4 p-4 bg-black/30 rounded-xl inline-block">
+                        <p class="font-medium text-white mb-2">Need help or have questions?</p>
+                        <p class="flex items-center gap-2"><i class="fas fa-paper-plane text-indigo-400"></i> <a
+                                href="mailto:adrika.mandal01@gmail.com"
+                                class="text-indigo-300 hover:text-white transition-colors underline decoration-indigo-500/50 underline-offset-4">adrika.mandal01@gmail.com</a>
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="border-t border-white/10 bg-black/40 py-8 text-center text-sm text-slate-500">
+        <p>&copy; 2026 RENTIVA.ai. All rights reserved.</p>
+    </footer>
+
+</body>
+
+</html>

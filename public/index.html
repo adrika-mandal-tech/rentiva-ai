@@ -1,0 +1,2542 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RENTIVA.ai - AI-Powered Property Management</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+    rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="rentiva-gradient.css">
+  <style>
+    :root {
+      --primary: #818cf8;
+      --primary-dark: #6366f1;
+      --secondary: #a78bfa;
+      --accent: #f472b6;
+      --success: #34d399;
+      --warning: #fbbf24;
+      --danger: #f87171;
+      --dark: #f3f4f6;
+      --light: #111827;
+      --surface: #1f2937;
+      --gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      --gradient-2: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+      --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+      --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+      --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+      --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+      --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* Light theme (default) */
+    body {
+      --bg-color: #ffffff;
+      --text-color: #1f2937;
+      --text-muted: #6b7280;
+      --text-secondary: #9ca3af;
+      --card-bg: #ffffff;
+      --border-color: #e5e7eb;
+    }
+
+    /* Dark theme */
+    body[data-theme="dark"] {
+      --bg-color: #111827;
+      --text-color: #f9fafb;
+      --text-muted: #9ca3af;
+      --text-secondary: #6b7280;
+      --card-bg: #1f2937;
+      --border-color: #374151;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      line-height: 1.6;
+      color: var(--text-color);
+      background: var(--bg-color);
+      min-height: 100vh;
+      transition: var(--transition);
+    }
+
+    /* Navigation */
+    nav {
+      position: fixed;
+      top: 0;
+      width: 100%;
+      background: var(--card-bg);
+      border-bottom: 1px solid var(--border-color);
+      -webkit-backdrop-filter: blur(10px);
+      backdrop-filter: blur(10px);
+      z-index: 1000;
+      box-shadow: var(--shadow-md);
+      transition: var(--transition);
+    }
+
+    .nav-container {
+      max-width: 100%;
+      /* Full width for far-left alignment */
+      margin: 0;
+      padding: 1rem 1rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .logo {
+      font-size: 1.5rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, #06b6d4 0%, #0ea5e9 50%, #eab308 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      -webkit-text-fill-color: transparent;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      white-space: nowrap;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 2rem;
+      list-style: none;
+    }
+
+    .nav-links a {
+      text-decoration: none;
+      color: var(--dark);
+      font-weight: 500;
+      transition: var(--transition);
+      position: relative;
+    }
+
+    .nav-links a:hover {
+      color: var(--primary);
+    }
+
+    .nav-links a::after {
+      content: '';
+      position: absolute;
+      bottom: -5px;
+      left: 0;
+      width: 0;
+      height: 2px;
+      background: var(--primary);
+      transition: var(--transition);
+    }
+
+    .nav-links a:hover::after {
+      width: 100%;
+    }
+
+    .cta-button {
+      background: var(--gradient);
+      color: white;
+      padding: 0.75rem 1.5rem;
+      border: none;
+      border-radius: 50px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: var(--transition);
+      box-shadow: var(--shadow-md);
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .cta-button:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-xl);
+    }
+
+    /* Hero Section */
+    .hero {
+      margin-top: 80px;
+      padding: 4rem 2rem;
+      position: relative;
+      overflow: hidden;
+      min-height: calc(100vh - 80px);
+      display: flex;
+      align-items: center;
+    }
+
+    #bg-video {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      min-width: 100%;
+      min-height: 100%;
+      width: auto;
+      height: auto;
+      transform: translate(-50%, -50%);
+      z-index: -1;
+      object-fit: cover;
+      filter: brightness(0.4);
+    }
+
+
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(to bottom, rgba(17, 24, 39, 0.4), rgba(17, 24, 39, 0.8));
+      z-index: 0;
+    }
+
+
+    .hero-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4rem;
+      align-items: center;
+      position: relative;
+      z-index: 1;
+    }
+
+    .hero-content h1 {
+      font-size: 3.5rem;
+      font-weight: 800;
+      color: white;
+      margin-bottom: 1.5rem;
+      line-height: 1.2;
+      animation: fadeInUp 0.8s ease-out;
+    }
+
+    .hero-content p {
+      font-size: 1.25rem;
+      color: rgba(255, 255, 255, 0.9);
+      margin-bottom: 2rem;
+      animation: fadeInUp 0.8s ease-out 0.2s both;
+    }
+
+    .hero-buttons {
+      display: flex;
+      gap: 1rem;
+      animation: fadeInUp 0.8s ease-out 0.4s both;
+    }
+
+    .btn-primary,
+    .btn-secondary {
+      padding: 1rem 2rem;
+      border: none;
+      border-radius: 50px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: var(--transition);
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .btn-primary {
+      background: white;
+      color: var(--primary);
+      box-shadow: var(--shadow-lg);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-xl);
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.2);
+      color: white;
+      border: 2px solid white;
+    }
+
+    .btn-secondary:hover {
+      background: white;
+      color: var(--primary);
+    }
+
+    .hero-image {
+      position: relative;
+      animation: float 3s ease-in-out infinite;
+    }
+
+    .hero-card {
+      background: var(--surface);
+      border-radius: 20px;
+      padding: 2rem;
+      box-shadow: var(--shadow-xl);
+      transform: perspective(1000px) rotateY(-10deg);
+      transition: var(--transition);
+    }
+
+    .hero-card:hover {
+      transform: perspective(1000px) rotateY(0deg);
+    }
+
+    .hero-card h3 {
+      color: var(--primary);
+      margin-bottom: 1rem;
+      font-size: 1.5rem;
+    }
+
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1rem;
+      margin-top: 1.5rem;
+    }
+
+    .stat-item {
+      text-align: center;
+      padding: 1rem;
+      background: var(--light);
+      border-radius: 10px;
+    }
+
+    .stat-number {
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--primary);
+    }
+
+    .stat-label {
+      font-size: 0.875rem;
+      color: var(--text-muted);
+    }
+
+    /* Features Section */
+    .features {
+      padding: 5rem 2rem;
+      background: var(--light);
+    }
+
+    .features-container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .section-header {
+      text-align: center;
+      margin-bottom: 4rem;
+    }
+
+    .section-header h2 {
+      font-size: 2.5rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+      background: var(--gradient);
+      -webkit-background-clip: text;
+      -moz-background-clip: text;
+      -ms-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .section-header p {
+      font-size: 1.125rem;
+      color: var(--text-secondary);
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 2rem;
+    }
+
+    .feature-card {
+      background: var(--surface);
+      padding: 2rem;
+      border-radius: 20px;
+      box-shadow: var(--shadow-md);
+      transition: var(--transition);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .feature-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: var(--gradient);
+    }
+
+    .feature-card:hover {
+      transform: translateY(-5px);
+      box-shadow: var(--shadow-xl);
+    }
+
+    .feature-icon {
+      width: 60px;
+      height: 60px;
+      background: var(--gradient);
+      border-radius: 15px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 1.5rem;
+      font-size: 1.5rem;
+      color: white;
+    }
+
+    .feature-card h3 {
+      font-size: 1.25rem;
+      margin-bottom: 1rem;
+      color: var(--dark);
+    }
+
+    .feature-card p {
+      color: var(--text-secondary);
+      line-height: 1.6;
+    }
+
+    /* AI Section */
+    .ai-section {
+      padding: 5rem 2rem;
+      background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+      color: white;
+    }
+
+    .ai-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4rem;
+      align-items: center;
+    }
+
+    .ai-content h2 {
+      font-size: 2.5rem;
+      font-weight: 700;
+      margin-bottom: 1.5rem;
+    }
+
+    .ai-content p {
+      font-size: 1.125rem;
+      margin-bottom: 2rem;
+      opacity: 0.9;
+    }
+
+    .ai-features {
+      list-style: none;
+    }
+
+    .ai-features li {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1rem;
+      font-size: 1.125rem;
+    }
+
+    .ai-features i {
+      color: var(--success);
+      font-size: 1.25rem;
+    }
+
+    .ai-demo {
+      background: var(--surface);
+      border-radius: 20px;
+      padding: 2rem;
+      box-shadow: var(--shadow-xl);
+      color: var(--dark);
+    }
+
+    .ai-demo h3 {
+      color: var(--primary);
+      margin-bottom: 1.5rem;
+    }
+
+    .chat-interface {
+      background: var(--light);
+      border-radius: 15px;
+      padding: 1.5rem;
+      height: 400px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      margin-bottom: 1rem;
+    }
+
+    .message {
+      margin-bottom: 1rem;
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .message.user {
+      flex-direction: row-reverse;
+    }
+
+    .message-bubble {
+      max-width: 70%;
+      padding: 0.75rem 1rem;
+      border-radius: 15px;
+      background: var(--primary);
+      color: white;
+      position: relative;
+      animation: messageSlide 0.3s ease-out;
+    }
+
+    .message.user .message-bubble {
+      background: var(--gradient);
+    }
+
+    .typing-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+    }
+
+    .typing-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: currentColor;
+      animation: typing 1.4s infinite;
+    }
+
+    .typing-dot:nth-child(2) {
+      animation-delay: 0.2s;
+    }
+
+    .typing-dot:nth-child(3) {
+      animation-delay: 0.4s;
+    }
+
+    @keyframes typing {
+
+      0%,
+      60%,
+      100% {
+        transform: translateY(0);
+      }
+
+      30% {
+        transform: translateY(-10px);
+      }
+    }
+
+    @keyframes messageSlide {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .chat-input {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .chat-input input {
+      flex: 1;
+      padding: 0.75rem;
+      border: 2px solid #e5e7eb;
+      border-radius: 25px;
+      outline: none;
+      transition: var(--transition);
+    }
+
+    .chat-input input:focus {
+      border-color: var(--primary);
+    }
+
+    .chat-input button {
+      background: var(--gradient);
+      color: white;
+      border: none;
+      padding: 0.75rem 1.5rem;
+      border-radius: 25px;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+
+    /* Dashboard Section */
+    .dashboard {
+      padding: 5rem 2rem;
+      background: var(--light);
+    }
+
+    .dashboard-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      color: var(--dark);
+    }
+
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 2rem;
+      margin-bottom: 3rem;
+    }
+
+    .dashboard-card {
+      background: var(--surface);
+      padding: 2rem;
+      border-radius: 20px;
+      box-shadow: var(--shadow-md);
+      transition: var(--transition);
+    }
+
+    .dashboard-card:hover {
+      transform: translateY(-5px);
+      box-shadow: var(--shadow-xl);
+    }
+
+    .dashboard-card h3 {
+      color: var(--text-muted);
+      font-size: 0.875rem;
+      font-weight: 500;
+      margin-bottom: 0.5rem;
+      text-transform: uppercase;
+    }
+
+    .dashboard-card .value {
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--dark);
+    }
+
+    .dashboard-card .change {
+      font-size: 0.875rem;
+      margin-top: 0.5rem;
+    }
+
+    .change.positive {
+      color: var(--success);
+    }
+
+    .change.negative {
+      color: var(--danger);
+    }
+
+    /* Footer */
+    footer {
+      background: var(--dark);
+      color: white;
+      padding: 3rem 2rem 1rem;
+    }
+
+    .footer-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 2rem;
+      margin-bottom: 2rem;
+    }
+
+    .footer-section h3 {
+      margin-bottom: 1rem;
+      color: white;
+    }
+
+    .footer-section ul {
+      list-style: none;
+    }
+
+    .footer-section ul li {
+      margin-bottom: 0.5rem;
+    }
+
+    .footer-section a {
+      color: var(--text-secondary);
+      text-decoration: none;
+      transition: var(--transition);
+    }
+
+    .footer-section a:hover {
+      color: white;
+    }
+
+    .footer-bottom {
+      text-align: center;
+      padding-top: 2rem;
+      border-top: 1px solid #73a3ef;
+      color: var(--text-secondary);
+    }
+
+    /* Animations */
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(30px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes float {
+
+      0%,
+      100% {
+        transform: translateY(0);
+      }
+
+      50% {
+        transform: translateY(-10px);
+      }
+    }
+
+    /* Sidebar Styles */
+    .sidebar {
+      position: fixed;
+      top: 0;
+      left: -350px;
+      width: 350px;
+      height: 100vh;
+      background: white;
+      box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+      z-index: 2000;
+      transition: left 0.3s ease;
+      overflow-y: auto;
+    }
+
+    .sidebar.active {
+      left: 0;
+    }
+
+    .sidebar-header {
+      padding: 2rem;
+      background: var(--gradient);
+      color: white;
+      position: relative;
+    }
+
+    .profile-section {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .profile-photo {
+      position: relative;
+      width: 60px;
+      height: 60px;
+    }
+
+    .profile-photo img {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 3px solid white;
+    }
+
+    .profile-status {
+      position: absolute;
+      bottom: 0;
+      right: 0;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      border: 2px solid white;
+    }
+
+    .profile-status.online {
+      background: #10b981;
+    }
+
+    .profile-status.offline {
+      background: #6b7280;
+    }
+
+    .profile-info {
+      flex: 1;
+    }
+
+    .user-type {
+      font-size: 0.875rem;
+      opacity: 0.9;
+      font-weight: 500;
+    }
+
+    .user-name {
+      font-size: 1.125rem;
+      font-weight: 600;
+    }
+
+    .sidebar-close {
+      position: absolute;
+      top: 1rem;
+      right: 1rem;
+      background: rgba(255, 255, 255, 0.2);
+      border: none;
+      color: white;
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.3s ease;
+    }
+
+    .sidebar-close:hover {
+      background: rgba(255, 255, 255, 0.3);
+    }
+
+    .sidebar-content {
+      padding: 2rem;
+    }
+
+    .sidebar-section {
+      margin-bottom: 2rem;
+    }
+
+    .sidebar-section h4 {
+      color: var(--dark);
+      font-size: 0.875rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      margin-bottom: 1rem;
+      opacity: 0.7;
+    }
+
+    .sidebar-btn {
+      width: 100%;
+      padding: 0.75rem 1rem;
+      background: transparent;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-size: 0.875rem;
+      color: var(--dark);
+      transition: all 0.3s ease;
+      margin-bottom: 0.5rem;
+    }
+
+    .sidebar-btn:hover {
+      background: var(--gradient);
+      color: white;
+      border-color: transparent;
+    }
+
+    .sidebar-btn.logout-btn {
+      background: var(--danger);
+      color: white;
+      border-color: var(--danger);
+    }
+
+    .sidebar-btn.logout-btn:hover {
+      background: #dc2626;
+      border-color: #dc2626;
+    }
+
+    .sidebar-toggle {
+      background: transparent;
+      border: none;
+      color: var(--dark);
+      font-size: 1.25rem;
+      cursor: pointer;
+      padding: 0.5rem;
+      border-radius: 8px;
+      transition: background 0.3s ease;
+    }
+
+    .sidebar-toggle:hover {
+      background: rgba(0, 0, 0, 0.1);
+    }
+
+    /* Auth Modal Styles */
+    .auth-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 3000;
+      -webkit-backdrop-filter: blur(5px);
+      backdrop-filter: blur(5px);
+    }
+
+    .auth-modal.active {
+      display: flex;
+    }
+
+    .auth-modal-content {
+      background: white;
+      border-radius: 20px;
+      width: 90%;
+      max-width: 500px;
+      max-height: 90vh;
+      overflow-y: auto;
+      position: relative;
+      animation: modalSlideIn 0.3s ease;
+    }
+
+    @keyframes modalSlideIn {
+      from {
+        opacity: 0;
+        transform: translateY(-50px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .auth-modal-header {
+      padding: 2rem 2rem 1rem;
+      border-bottom: 1px solid #e5e7eb;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .auth-modal-header h2 {
+      color: var(--dark);
+      font-size: 1.5rem;
+      margin: 0;
+    }
+
+    .modal-close {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-size: 1.25rem;
+      cursor: pointer;
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.3s ease;
+    }
+
+    .modal-close:hover {
+      background: rgba(0, 0, 0, 0.1);
+    }
+
+    .auth-tabs {
+      display: flex;
+      padding: 1rem 2rem 0;
+      gap: 1rem;
+    }
+
+    .auth-tab {
+      flex: 1;
+      padding: 0.75rem 1rem;
+      background: transparent;
+      border: 2px solid #e5e7eb;
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: 500;
+      color: var(--dark);
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+    }
+
+    .auth-tab.active {
+      background: var(--gradient);
+      color: white;
+      border-color: transparent;
+    }
+
+    .auth-forms {
+      padding: 2rem;
+    }
+
+    .auth-form {
+      animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+      }
+
+      to {
+        opacity: 1;
+      }
+    }
+
+    .form-sections {
+      margin-bottom: 1.5rem;
+    }
+
+    .form-section {
+      display: none;
+    }
+
+    .form-section.active {
+      display: block;
+    }
+
+    .form-section h3 {
+      color: var(--dark);
+      font-size: 1.25rem;
+      margin-bottom: 1.5rem;
+      text-align: center;
+    }
+
+    .form-group {
+      margin-bottom: 1.5rem;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 0.5rem;
+      color: var(--dark);
+      font-weight: 500;
+    }
+
+    .form-group input {
+      width: 100%;
+      padding: 0.75rem 1rem;
+      border: 2px solid #e5e7eb;
+      border-radius: 10px;
+      font-size: 1rem;
+      transition: border-color 0.3s ease;
+    }
+
+    .form-group input:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+
+    .auth-submit-btn {
+      width: 100%;
+      padding: 1rem;
+      background: var(--gradient);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.3s ease;
+    }
+
+    .auth-submit-btn:hover {
+      transform: translateY(-2px);
+    }
+
+    .form-switch {
+      text-align: center;
+      margin-top: 1rem;
+      color: var(--text-muted);
+    }
+
+    .form-switch a {
+      color: var(--primary);
+      text-decoration: none;
+      font-weight: 500;
+    }
+
+    .form-switch a:hover {
+      text-decoration: underline;
+    }
+
+    .auth-divider {
+      text-align: center;
+      margin: 2rem 0;
+      position: relative;
+    }
+
+    .auth-divider::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: #e5e7eb;
+    }
+
+    .auth-divider span {
+      background: white;
+      padding: 0 1rem;
+      color: var(--text-muted);
+      font-size: 0.875rem;
+    }
+
+    .google-auth-btn {
+      width: 100%;
+      padding: 1rem;
+      background: white;
+      color: var(--dark);
+      border: 2px solid #e5e7eb;
+      border-radius: 10px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.75rem;
+    }
+
+    .google-auth-btn:hover {
+      background: #f8f9fa;
+      border-color: #d1d5db;
+    }
+
+    /* Mobile Responsive */
+    @media (max-width: 768px) {
+      .sidebar {
+        width: 100%;
+        left: -100%;
+      }
+
+      .auth-modal-content {
+        width: 95%;
+        margin: 1rem;
+      }
+
+      .nav-links {
+        display: none;
+      }
+
+      .sidebar-toggle {
+        display: block !important;
+      }
+
+      .hero-container {
+        grid-template-columns: 1fr;
+        text-align: center;
+      }
+
+      .hero-content h1 {
+        font-size: 2.5rem;
+      }
+
+      .hero-buttons {
+        justify-content: center;
+        flex-wrap: wrap;
+      }
+
+      .ai-container {
+        grid-template-columns: 1fr;
+      }
+
+      .dashboard-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Profile Upload Styles */
+    .profile-upload-container {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .profile-preview {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: var(--light);
+      border: 2px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      transition: all 0.3s ease;
+    }
+
+    .profile-preview img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .profile-preview i {
+      font-size: 2rem;
+      color: var(--text-muted);
+    }
+
+    .profile-upload-btn {
+      padding: 0.5rem 1rem;
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.875rem;
+      transition: all 0.3s ease;
+    }
+
+    .profile-upload-btn:hover {
+      background: var(--primary-dark);
+      transform: translateY(-1px);
+    }
+
+    /* Utility classes for inline style replacement */
+    .hidden-btn,
+    .hidden-element {
+      display: none !important;
+    }
+
+    .flex-gap-half {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .pos-rel-flex {
+      position: relative;
+      flex: 1;
+    }
+
+    .primary-color-static {
+      color: var(--primary);
+      position: static;
+    }
+
+    .flex-col-gap {
+      display: flex;
+      gap: 0.5rem;
+      flex-direction: column;
+    }
+
+    .pos-rel {
+      position: relative;
+    }
+
+    .small-bold-text {
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+
+    .otp-timer-container {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 0.5rem;
+    }
+
+    .otp-input-style {
+      letter-spacing: 4px;
+      font-weight: 700;
+    }
+
+    .nav-left-flex {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .sidebar-toggle {
+      color: var(--dark);
+    }
+
+    .sync-btn-style {
+      padding: 0 1rem;
+      border: 2px solid #e5e7eb;
+      background: white;
+      border-radius: 12px;
+      cursor: pointer;
+    }
+
+    .otp-gen-btn-style {
+      width: 100%;
+      padding: 0.75rem;
+      font-size: 0.9rem;
+      justify-content: center;
+      background: rgba(99, 102, 241, 0.1);
+      color: var(--primary);
+      border: 1px solid var(--primary);
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Sidebar -->
+  <div class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="profile-section">
+        <div class="profile-photo">
+          <img src="https://picsum.photos/seed/user123/100/100.jpg" alt="Profile" id="profile-img">
+          <div class="profile-status online"></div>
+        </div>
+        <div class="profile-info">
+          <div class="user-type" id="user-type">GUEST</div>
+          <div class="user-name" id="user-name">Not Signed In</div>
+        </div>
+      </div>
+      <button class="sidebar-close" onclick="toggleSidebar()" title="Close sidebar">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+
+    <div class="sidebar-content">
+      <div class="sidebar-section">
+        <h4>Account</h4>
+        <button class="sidebar-btn" onclick="openAuthModal()">
+          <i class="fas fa-sign-in-alt"></i> Login / Sign Up
+        </button>
+        <button class="sidebar-btn" onclick="toggleTheme()">
+          <i class="fas fa-moon" id="theme-icon"></i> <span id="theme-text">Dark Mode</span>
+        </button>
+        <button class="sidebar-btn" onclick="toggleNotifications()">
+          <i class="fas fa-bell" id="notification-icon"></i> <span id="notification-text">Notifications: ON</span>
+        </button>
+      </div>
+
+      <div class="sidebar-section">
+        <h4>Actions</h4>
+        <button class="sidebar-btn" onclick="window.location.href='chat.html'">
+          <i class="fas fa-comments text-indigo-500"></i> Rentiva Chat
+        </button>
+        <button class="sidebar-btn" onclick="goToOwner()" id="owner-btn" class="hidden-btn">
+          <i class="fas fa-home"></i> Owner Portal
+        </button>
+        <button class="sidebar-btn" onclick="goToTenant()" id="tenant-btn" class="hidden-btn">
+          <i class="fas fa-user"></i> Tenant Portal
+        </button>
+        <button class="sidebar-btn logout-btn" onclick="signOut()" id="signout-btn" class="hidden-btn">
+          <i class="fas fa-sign-out-alt"></i> Sign Out
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Auth Modal -->
+  <div class="auth-modal" id="authModal">
+    <div class="auth-modal-content">
+      <div class="auth-modal-header">
+        <h2>Welcome to Rentiva</h2>
+        <button class="modal-close" onclick="closeAuthModal()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <div class="auth-tabs">
+        <button class="auth-tab active" onclick="switchAuthTab('owner')">
+          <i class="fas fa-home"></i> Sign up as Owner
+        </button>
+        <button class="auth-tab" onclick="switchAuthTab('tenant')">
+          <i class="fas fa-user"></i> Sign up as Tenant
+        </button>
+      </div>
+
+      <div class="auth-forms">
+        <!-- Owner Form -->
+        <div class="auth-form" id="ownerForm">
+          <div class="form-sections">
+            <div class="form-section active" id="ownerLogin">
+              <h3>Login as Owner</h3>
+              <form onsubmit="handleLogin(event, 'owner')">
+                <div class="form-group">
+                  <label>Email</label>
+                  <input type="email" required placeholder="owner@example.com">
+                </div>
+                <div class="form-group">
+                  <label>Password</label>
+                  <input type="password" required placeholder="Enter your password">
+                </div>
+                <button type="submit" class="auth-submit-btn">
+                  <i class="fas fa-sign-in-alt"></i> Login as Owner
+                </button>
+              </form>
+              <p class="form-switch">
+                Don't have an account? <a href="#" onclick="switchFormSection('owner', 'signup')">Sign up</a>
+              </p>
+            </div>
+
+            <div class="form-section" id="ownerSignup">
+              <h3>Sign up as Owner</h3>
+              <form onsubmit="handleSignup(event, 'owner')">
+                <div class="form-group">
+                  <label>Profile Picture</label>
+                  <div class="profile-upload-container">
+                    <div class="profile-preview" id="ownerProfilePreview">
+                      <i class="fas fa-user"></i>
+                    </div>
+                    <input type="file" id="ownerProfilePic" accept="image/*" onchange="previewProfileImage('owner')" style="display: none;">
+                    <button type="button" class="profile-upload-btn" onclick="document.getElementById('ownerProfilePic').click()">
+                      <i class="fas fa-camera"></i> Upload Photo
+                    </button>
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label>Full Name</label>
+                  <input type="text" required placeholder="John Doe">
+                </div>
+                <div class="form-group">
+                  <label>Email</label>
+                  <input type="email" required placeholder="owner@example.com">
+                  <i class="fas fa-envelope"></i>
+                </div>
+                <!-- Phone & Contact Sync -->
+                <div class="form-group">
+                  <label>Phone Number</label>
+                  <div class="flex-gap-half">
+                    <div class="pos-rel-flex">
+                      <input type="tel" id="ownerPhone" required placeholder="+91 98765 43210">
+                      <i class="fas fa-phone"></i>
+                    </div>
+                    <button type="button" class="icon-btn-sync" onclick="syncContacts('ownerPhone')"
+                      title="Sync Contacts"
+                      class="sync-btn-style">
+                      <i class="fas fa-address-book" class="primary-color-static"></i>
+                    </button>
+                  </div>
+                </div>
+                <!-- OTP Section -->
+                <div class="form-group" id="owner-otp-section">
+                  <label>OTP Verification</label>
+                  <div class="otp-container" class="flex-col-gap">
+                    <button type="button" id="owner-generate-btn" class="btn-secondary" onclick="generateOTP('owner')"
+                      class="otp-gen-btn-style">
+                      Generate OTP
+                    </button>
+                    <div id="owner-otp-input-group" class="hidden-btn">
+                      <div class="pos-rel">
+                        <input type="text" id="owner-otp-input" placeholder="Enter 6-digit OTP" maxlength="6" class="otp-input-style">
+                        <i class="fas fa-key"></i>
+                      </div>
+                      <div
+                        class="otp-timer-container">
+                        <span id="owner-timer" class="small-muted-text">00:00</span>
+                        <span id="owner-otp-status" class="small-bold-text"></span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label>Password</label>
+                  <input type="password" required placeholder="Create a password">
+                </div>
+                <button type="submit" class="auth-submit-btn">
+                  <i class="fas fa-user-plus"></i> Sign up as Owner
+                </button>
+              </form>
+              <p class="form-switch">
+                Already have an account? <a href="#" onclick="switchFormSection('owner', 'login')">Login</a>
+              </p>
+            </div>
+          </div>
+
+          <div class="auth-divider">
+            <span>OR</span>
+          </div>
+
+          <button class="google-auth-btn" onclick="handleGoogleAuth('owner')">
+            <i class="fab fa-google"></i> Continue with Google
+          </button>
+        </div>
+
+        <!-- Tenant Form -->
+        <div class="auth-form" id="tenantForm" class="hidden-btn">
+          <div class="form-sections">
+            <div class="form-section active" id="tenantLogin">
+              <h3>Login as Tenant</h3>
+              <form onsubmit="handleLogin(event, 'tenant')">
+                <div class="form-group">
+                  <label>Email</label>
+                  <input type="email" required placeholder="tenant@example.com">
+                </div>
+                <div class="form-group">
+                  <label>Password</label>
+                  <input type="password" required placeholder="Enter your password">
+                </div>
+                <button type="submit" class="auth-submit-btn">
+                  <i class="fas fa-sign-in-alt"></i> Login as Tenant
+                </button>
+              </form>
+              <p class="form-switch">
+                Don't have an account? <a href="#" onclick="switchFormSection('tenant', 'signup')">Sign up</a>
+              </p>
+            </div>
+
+            <div class="form-section" id="tenantSignup">
+              <h3>Sign up as Tenant</h3>
+              <form onsubmit="handleSignup(event, 'tenant')">
+                <div class="form-group">
+                  <label>Profile Picture</label>
+                  <div class="profile-upload-container">
+                    <div class="profile-preview" id="tenantProfilePreview">
+                      <i class="fas fa-user"></i>
+                    </div>
+                    <input type="file" id="tenantProfilePic" accept="image/*" onchange="previewProfileImage('tenant')" style="display: none;">
+                    <button type="button" class="profile-upload-btn" onclick="document.getElementById('tenantProfilePic').click()">
+                      <i class="fas fa-camera"></i> Upload Photo
+                    </button>
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label>Full Name</label>
+                  <input type="text" required placeholder="Jane Smith">
+                </div>
+                <div class="form-group">
+                  <label>Email</label>
+                  <input type="email" required placeholder="tenant@example.com">
+                  <i class="fas fa-envelope"></i>
+                </div>
+                <!-- Phone & Contact Sync -->
+                <div class="form-group">
+                  <label>Phone Number</label>
+                  <div class="flex-gap-half">
+                    <div class="pos-rel-flex">
+                      <input type="tel" id="tenantPhone" required placeholder="+91 98765 43210">
+                      <i class="fas fa-phone"></i>
+                    </div>
+                    <button type="button" class="icon-btn-sync" onclick="syncContacts('tenantPhone')"
+                      title="Sync Contacts"
+                      class="sync-btn-style">
+                      <i class="fas fa-address-book" class="primary-color-static"></i>
+                    </button>
+                  </div>
+                </div>
+                <!-- OTP Section -->
+                <div class="form-group" id="tenant-otp-section">
+                  <label>OTP Verification</label>
+                  <div class="otp-container" class="flex-col-gap">
+                    <button type="button" id="tenant-generate-btn" class="btn-secondary" onclick="generateOTP('tenant')"
+                      class="otp-gen-btn-style">
+                      Generate OTP
+                    </button>
+                    <div id="tenant-otp-input-group" class="hidden-btn">
+                      <div class="pos-rel">
+                        <input type="text" id="tenant-otp-input" placeholder="Enter 6-digit OTP" maxlength="6" class="otp-input-style">
+                        <i class="fas fa-key"></i>
+                      </div>
+                      <div class="otp-timer-container">
+                        <span id="tenant-timer" class="small-muted-text">00:00</span>
+                        <span id="tenant-otp-status" class="small-bold-text"></span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label>Password</label>
+                  <input type="password" required placeholder="Create a password">
+                </div>
+                <button type="submit" class="auth-submit-btn">
+                  <i class="fas fa-user-plus"></i> Sign up as Tenant
+                </button>
+              </form>
+              <p class="form-switch">
+                Already have an account? <a href="#" onclick="switchFormSection('tenant', 'login')">Login</a>
+              </p>
+            </div>
+          </div>
+
+          <div class="auth-divider">
+            <span>OR</span>
+          </div>
+
+          <button class="google-auth-btn" onclick="handleGoogleAuth('tenant')">
+            <i class="fab fa-google"></i> Continue with Google
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Navigation -->
+  <nav id="navbar">
+    <div class="nav-container">
+      <div class="nav-left nav-left-flex">
+        <button class="sidebar-toggle" onclick="toggleSidebar()" title="Toggle sidebar">
+          <i class="fas fa-bars"></i>
+        </button>
+        <div class="logo">
+          <i class="fas fa-building"></i>
+          <span class="rentiva-heading">RENTIVA.ai</span>
+        </div>
+      </div>
+      <ul class="nav-links">
+        <li><a href="#home">Home</a></li>
+        <li><a href="#features">Features</a></li>
+        <li><a href="#ai">AI Assistant</a></li>
+        <li><a href="#dashboard">Dashboard</a></li>
+        <li><a href="pricing.html">Pricing</a></li>
+      </ul>
+      <button onclick="handleLaunchApp()" class="cta-button">
+        <i class="fas fa-rocket"></i> Launch App
+      </button>
+    </div>
+  </nav>
+
+  <!-- Hero Section -->
+  <section id="home" class="hero">
+    <video autoplay muted loop id="bg-video">
+      <source src="video.mp4" type="video/mp4">
+    </video>
+    <div class="hero-container">
+
+
+      <div class="hero-content">
+        <h1>Smart Property Management with AI</h1>
+        <p>Transform your rental business with intelligent automation, real-time insights, and predictive analytics
+          powered by advanced AI technology.</p>
+        <div class="hero-buttons">
+          <button onclick="handleLaunchApp()" class="btn-primary">
+            <i class="fas fa-play"></i> Get Started
+          </button>
+          <button class="btn-secondary" onclick="scrollToSection('features')">
+            <i class="fas fa-info-circle"></i> Learn More
+          </button>
+        </div>
+      </div>
+      <div class="hero-image">
+        <div class="hero-card">
+          <h3><i class="fas fa-chart-line"></i> Live Dashboard</h3>
+          <div class="stat-grid">
+            <div class="stat-item">
+              <div class="stat-number">4</div>
+              <div class="stat-label">Total Units</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-number">4</div>
+              <div class="stat-label">Occupied</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-number">₹48.5K</div>
+              <div class="stat-label">Monthly Revenue</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-number">100%</div>
+              <div class="stat-label">Collection Rate</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features Section -->
+  <section class="features" id="features">
+    <div class="features-container">
+      <div class="section-header">
+        <h2>Powerful Features for Modern Landlords</h2>
+        <p>Everything you need to manage your properties efficiently and grow your rental business</p>
+      </div>
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-icon">
+            <i class="fas fa-robot"></i>
+          </div>
+          <h3>AI-Powered Analytics</h3>
+          <p>Get predictive insights on rent trends, maintenance schedules, and tenant behavior with our advanced AI
+            algorithms.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">
+            <i class="fas fa-file-invoice-dollar"></i>
+          </div>
+          <h3>Automated Billing</h3>
+          <p>Generate professional rent receipts automatically with electricity calculations and send them to tenants
+            instantly.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">
+            <i class="fas fa-chart-bar"></i>
+          </div>
+          <h3>Real-time Dashboard</h3>
+          <p>Monitor your property performance with live updates on payments, occupancy rates, and revenue metrics.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">
+            <i class="fas fa-mobile-alt"></i>
+          </div>
+          <h3>Mobile Responsive</h3>
+          <p>Access your property data from anywhere with our fully responsive design that works on all devices.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">
+            <i class="fas fa-shield-alt"></i>
+          </div>
+          <h3>Secure & Reliable</h3>
+          <p>Your data is protected with enterprise-grade security and automatic backups for peace of mind.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">
+            <i class="fas fa-bell"></i>
+          </div>
+          <h3>Smart Notifications</h3>
+          <p>Receive intelligent alerts for rent due dates, payment confirmations, and important property updates.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- AI Section -->
+  <section class="ai-section" id="ai">
+    <div class="ai-container">
+      <div class="ai-content">
+        <h2>Your AI Property Assistant</h2>
+        <p>Experience the future of property management with our intelligent AI assistant that helps you make
+          data-driven decisions.</p>
+        <ul class="ai-features">
+          <li><i class="fas fa-check-circle"></i> Predictive maintenance scheduling</li>
+          <li><i class="fas fa-check-circle"></i> Rent optimization recommendations</li>
+          <li><i class="fas fa-check-circle"></i> Tenant screening assistance</li>
+          <li><i class="fas fa-check-circle"></i> Market trend analysis</li>
+          <li><i class="fas fa-check-circle"></i> Automated financial reporting</li>
+        </ul>
+      </div>
+      <div class="ai-demo">
+        <h3><i class="fas fa-comments"></i> Try AI Assistant</h3>
+        <div class="chat-interface">
+          <div class="chat-messages" id="chat-messages">
+            <div class="message">
+              <div class="message-bubble">
+                Hello! I'm your AI property assistant. How can I help you manage your properties more effectively today?
+              </div>
+            </div>
+          </div>
+          <div class="chat-input">
+            <input type="text" id="ai-input" placeholder="Ask me anything about property management...">
+            <button onclick="sendAIMessage()" title="Send message">
+              <i class="fas fa-paper-plane"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Dashboard Preview -->
+  <section class="dashboard" id="dashboard">
+    <div class="dashboard-container">
+      <div class="section-header">
+        <h2>Comprehensive Dashboard</h2>
+        <p>Get a complete overview of your property portfolio at a glance</p>
+      </div>
+      <div class="dashboard-grid">
+        <div class="dashboard-card">
+          <h3>Total Revenue</h3>
+          <div class="value">₹48,500</div>
+          <div class="change positive">
+            <i class="fas fa-arrow-up"></i> 12% from last month
+          </div>
+        </div>
+        <div class="dashboard-card">
+          <h3>Occupancy Rate</h3>
+          <div class="value">100%</div>
+          <div class="change positive">
+            <i class="fas fa-arrow-up"></i> All units occupied
+          </div>
+        </div>
+        <div class="dashboard-card">
+          <h3>Pending Payments</h3>
+          <div class="value">₹0</div>
+          <div class="change positive">
+            <i class="fas fa-check"></i> All payments received
+          </div>
+        </div>
+        <div class="dashboard-card">
+          <h3>Maintenance Score</h3>
+          <div class="value">95%</div>
+          <div class="change positive">
+            <i class="fas fa-arrow-up"></i> Excellent condition
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <div class="footer-container">
+      <div class="footer-section">
+        <h3>Rentiva</h3>
+        <p>The future of property management is here. Smart, efficient, and AI-powered.</p>
+      </div>
+      <div class="footer-section">
+        <h3>Product</h3>
+        <ul>
+          <li><a href="#features">Features</a></li>
+          <li><a href="#ai">AI Assistant</a></li>
+          <li><a href="#dashboard">Dashboard</a></li>
+        </ul>
+      </div>
+      <div class="footer-section">
+        <h3>Support</h3>
+        <ul>
+          <li><a href="#">Documentation</a></li>
+          <li><a href="#">Help Center</a></li>
+          <li><a href="#">Contact Us</a></li>
+        </ul>
+      </div>
+      <div class="footer-section">
+        <h3>Connect</h3>
+        <ul>
+          <li><a href="#"><i class="fab fa-twitter"></i> Twitter</a></li>
+          <li><a href="#"><i class="fab fa-linkedin"></i> LinkedIn</a></li>
+          <li><a href="#"><i class="fab fa-github"></i> GitHub</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>&copy; 2026 Rentiva. All rights reserved. Made with ❤️ for property managers.</p>
+    </div>
+  </footer>
+
+  <!-- Firebase SDK -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-app.js";
+    import {
+      getAuth,
+      signInWithEmailAndPassword,
+      createUserWithEmailAndPassword,
+      signInWithPopup,
+      GoogleAuthProvider,
+      signOut,
+      onAuthStateChanged
+    } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-auth.js";
+    import { 
+      getFirestore, 
+      doc, 
+      setDoc, 
+      getDoc, 
+      updateDoc,
+      serverTimestamp 
+    } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-firestore.js";
+
+    // Firebase configuration (Placeholder - update with actual config via MCP once logged in)
+    const firebaseConfig = {
+      apiKey: "AIzaSyCG8oXE_17nrbzKZ2v68aEhNYkhrGyiPjU",
+      authDomain: "rentiva-ai.firebaseapp.com",
+      projectId: "rentiva-ai",
+      storageBucket: "rentiva-ai.firebasestorage.app",
+      messagingSenderId: "72917717553",
+      appId: "1:72917717553:web:c4c163e171b5c73a733b10",
+      measurementId: "G-1PT2RQW0QF"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    // Global state (Move to window for module script access)
+    window.currentUser = null;
+    window.generatedOTPs = {};
+    window.notificationsEnabled = true;
+    window.darkMode = false;
+
+    // Navigation logic
+    window.handleLaunchApp = () => {
+      if (window.currentUser) {
+        if (window.currentUser.type === 'owner') {
+          window.location.href = 'owner.html';
+        } else {
+          window.location.href = 'tenant.html';
+        }
+      } else {
+        openAuthModal();
+      }
+    };
+
+    window.handleDashboardLink = (e) => {
+      e.preventDefault();
+      if (window.currentUser) {
+        scrollToSection('dashboard');
+      } else {
+        openAuthModal();
+      }
+    };
+
+    const provider = new GoogleAuthProvider();
+    provider.setCustomParameters({
+      prompt: 'select_account'
+    });
+
+
+
+
+    // Export functions to window for use in HTML onclick handlers
+    window.handleLogin = async (event, userType) => {
+      event.preventDefault();
+      const form = event.target;
+      const email = form.querySelector('input[type="email"]').value;
+      const password = form.querySelector('input[type="password"]').value;
+
+      try {
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
+        
+        // Fetch role from Firestore
+        const userDoc = await getDoc(doc(db, 'users', user.uid));
+        let finalUserType = userType; // Fallback to button clicked
+        
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          finalUserType = userData.role?.toLowerCase() || userType;
+        }
+
+        localStorage.setItem('userType', finalUserType);
+        showNotification(`Welcome back! Logged in as ${finalUserType}.`, 'success');
+        closeAuthModal();
+        
+        setTimeout(() => {
+          window.location.href = `${finalUserType}.html`;
+        }, 1000);
+      } catch (error) {
+        console.error("Login Error:", error);
+        showNotification(error.message, 'error');
+      }
+
+    };
+
+    window.handleSignup = async (event, userType) => {
+      event.preventDefault();
+      const form = event.target;
+      const email = form.querySelector('input[type="email"]').value;
+      const password = form.querySelector('input[type="password"]').value;
+      const name = form.querySelector('input[type="text"]').value;
+
+      // Check OTP verification if required (keeping existing logic flow)
+      if (window.generatedOTPs[userType] && window.generatedOTPs[userType].verified) {
+        try {
+          const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+          const user = userCredential.user;
+          
+          // Save role and info to Firestore
+          await setDoc(doc(db, 'users', user.uid), {
+            uid: user.uid,
+            email: user.email,
+            displayName: name,
+            role: userType.charAt(0).toUpperCase() + userType.slice(1), // Store as 'Owner' or 'Tenant'
+            createdAt: serverTimestamp(),
+            lastSeen: serverTimestamp()
+          });
+
+          localStorage.setItem('userType', userType);
+          showNotification(`Welcome to Rentiva, ${name}! Account created.`, 'success');
+          closeAuthModal();
+          
+          setTimeout(() => {
+            window.location.href = `${userType}.html`;
+          }, 1000);
+        } catch (error) {
+          console.error("Signup Error:", error);
+          showNotification(error.message, 'error');
+        }
+
+      } else {
+        showNotification('Please verify your phone number with OTP first.', 'error');
+        const otpInput = document.getElementById(`${userType}-otp-input`);
+        if (otpInput) otpInput.focus();
+      }
+    };
+
+    window.handleGoogleAuth = async (userType) => {
+      try {
+        console.log("Initiating Google Auth for type:", userType);
+        const result = await signInWithPopup(auth, provider);
+        const user = result.user;
+        // Persist userType BEFORE redirect so portals and onAuthStateChanged can read it
+        localStorage.setItem('userType', userType);
+        showNotification(`Successfully authenticated with Google as ${user.displayName}!`, 'success');
+        closeAuthModal();
+
+        // Ensure user data is consistent
+        window.currentUser = {
+          uid: user.uid,
+          email: user.email,
+          displayName: user.displayName,
+          photoURL: user.photoURL,
+          type: userType
+        };
+
+        // Redirect based on userType
+        setTimeout(() => {
+          window.location.href = `${userType}.html`;
+        }, 1200);
+      } catch (error) {
+        console.error("Google Auth Full Error:", error);
+        console.error("Error Code:", error.code);
+        console.error("Error Message:", error.message);
+
+        if (error.code === 'auth/popup-blocked') {
+          showNotification('Sign-in popup was blocked. Please enable popups for this site.', 'error');
+        } else if (error.code === 'auth/cancelled-popup-request') {
+          // Ignore cancellation
+        } else if (error.code === 'auth/unauthorized-domain') {
+          showNotification('This domain is not authorized for Google Sign-In in Firebase. Please add it to Authorized Domains.', 'error');
+        } else {
+          showNotification(`Auth Error: ${error.message} (${error.code})`, 'error');
+        }
+      }
+    };
+
+    window.signOutUser = async () => {
+      try {
+        await signOut(auth);
+        showNotification('Successfully signed out!', 'info');
+      } catch (error) {
+        showNotification(error.message, 'error');
+      }
+    };
+
+    // Global listener for auth state
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        // Read the persisted user type — fall back to 'owner' if none saved
+        const savedType = localStorage.getItem('userType') || 'owner';
+        window.currentUser = {
+          uid: user.uid,
+          type: savedType,
+          email: user.email,
+          name: user.displayName || user.email.split('@')[0]
+        };
+      } else {
+        window.currentUser = null;
+      }
+      window.updateUserUI();
+    });
+  </script>
+
+  <script>
+    // Global state is now initialized in the module script above as window properties
+
+
+    // Sidebar functions
+    function toggleSidebar() {
+      const sidebar = document.getElementById('sidebar');
+      sidebar.classList.toggle('active');
+    }
+
+    // Auth modal functions
+    function openAuthModal() {
+      document.getElementById('authModal').classList.add('active');
+      document.getElementById('sidebar').classList.remove('active');
+    }
+
+    function closeAuthModal() {
+      document.getElementById('authModal').classList.remove('active');
+    }
+
+    // Profile image preview function
+    function previewProfileImage(userType) {
+      const fileInput = document.getElementById(`${userType}ProfilePic`);
+      const preview = document.getElementById(`${userType}ProfilePreview`);
+      
+      if (fileInput.files && fileInput.files[0]) {
+        const reader = new FileReader();
+        
+        reader.onload = function(e) {
+          preview.innerHTML = `<img src="${e.target.result}" alt="Profile Preview">`;
+        };
+        
+        reader.readAsDataURL(fileInput.files[0]);
+      }
+    }
+
+    function switchAuthTab(type) {
+      const tabs = document.querySelectorAll('.auth-tab');
+      const forms = document.querySelectorAll('.auth-form');
+
+      tabs.forEach(tab => tab.classList.remove('active'));
+      forms.forEach(form => form.style.display = 'none');
+
+      if (type === 'owner') {
+        tabs[0].classList.add('active');
+        document.getElementById('ownerForm').style.display = 'block';
+      } else {
+        tabs[1].classList.add('active');
+        document.getElementById('tenantForm').style.display = 'block';
+      }
+    }
+
+    function switchFormSection(userType, section) {
+      const loginForm = document.getElementById(`${userType}Login`);
+      const signupForm = document.getElementById(`${userType}Signup`);
+
+      if (section === 'login') {
+        loginForm.classList.add('active');
+        signupForm.classList.remove('active');
+      } else {
+        loginForm.classList.remove('active');
+        signupForm.classList.add('active');
+      }
+    }
+
+    // OTP & Contacts Logic
+
+
+    function generateOTP(userType) {
+      const phoneInput = document.getElementById(`${userType}Phone`);
+      if (!phoneInput.value || phoneInput.value.length < 10) {
+        showNotification('Please enter a valid phone number', 'error');
+        phoneInput.focus();
+        return;
+      }
+
+      // Simulate API call
+      const btn = document.getElementById(`${userType}-generate-btn`);
+      const originalText = btn.innerText;
+      btn.innerText = 'Sending...';
+      btn.disabled = true;
+
+      setTimeout(() => {
+        const otp = Math.floor(100000 + Math.random() * 900000);
+        window.generatedOTPs[userType] = { code: otp.toString(), verified: false };
+
+        // Show Inputs
+        document.getElementById(`${userType}-otp-input-group`).style.display = 'block';
+        btn.style.display = 'none';
+
+        // Simulate SMS
+        alert(`Rentiva OTP Code: ${otp}\nSentinel: Do not share this code.`);
+        showNotification('OTP sent to phone and email', 'success');
+
+        // Start Timer
+        startOTPTimer(userType);
+      }, 1500);
+    }
+
+
+    function startOTPTimer(userType) {
+      let timeLeft = 30; // 30 seconds
+      const timerDisplay = document.getElementById(`${userType}-timer`);
+      const input = document.getElementById(`${userType}-otp-input`);
+      const status = document.getElementById(`${userType}-otp-status`);
+
+      status.innerText = '';
+      status.style.color = 'inherit';
+      input.value = '';
+      input.disabled = false;
+      input.focus();
+
+      // Clear previous interval if any
+      if (window.generatedOTPs[userType].timerId) clearInterval(window.generatedOTPs[userType].timerId);
+
+      window.generatedOTPs[userType].timerId = setInterval(() => {
+        if (timeLeft <= 0) {
+          clearInterval(window.generatedOTPs[userType].timerId);
+          timerDisplay.innerText = "Resend OTP";
+          timerDisplay.style.cursor = "pointer";
+          timerDisplay.style.textDecoration = "underline";
+          timerDisplay.style.color = "var(--primary)";
+          timerDisplay.onclick = () => generateOTP(userType);
+        } else {
+          timerDisplay.innerText = `Resend in 00:${timeLeft < 10 ? '0' : ''}${timeLeft}`;
+          timeLeft--;
+        }
+      }, 1000);
+
+      // Add input listener for auto-verify
+      input.oninput = function () {
+        if (this.value.length === 6) {
+          verifyOTP(userType, this.value);
+        }
+      };
+    }
+
+
+    function verifyOTP(userType, inputCode) {
+      const status = document.getElementById(`${userType}-otp-status`);
+      const input = document.getElementById(`${userType}-otp-input`);
+
+      if (inputCode === window.generatedOTPs[userType].code) {
+        window.generatedOTPs[userType].verified = true;
+        status.innerText = '✓ Verified';
+        status.style.color = 'var(--success)';
+        input.style.borderColor = 'var(--success)';
+        input.disabled = true;
+        clearInterval(window.generatedOTPs[userType].timerId);
+        showNotification('Phone number verified successfully', 'success');
+      } else {
+        status.innerText = '✗ Invalid OTP';
+        status.style.color = 'var(--danger)';
+        input.style.borderColor = 'var(--danger)';
+        window.generatedOTPs[userType].verified = false;
+      }
+    }
+
+
+    async function syncContacts(inputId) {
+      const input = document.getElementById(inputId);
+
+      // Check if Contact Picker API is supported
+      if ('contacts' in navigator && 'ContactsManager' in window) {
+        try {
+          const props = ['name', 'tel'];
+          const opts = { multiple: false };
+
+          const contacts = await navigator.contacts.select(props, opts);
+
+          if (contacts.length) {
+            const contact = contacts[0];
+            const number = contact.tel && contact.tel[0] ? contact.tel[0] : '';
+            // Clean number
+            input.value = number;
+            showNotification(`Synced: ${contact.name[0]}`, 'success');
+          }
+        } catch (ex) {
+          console.error(ex);
+          // Handle cancellation or error without alerting if just cancelled
+          if (ex.name !== 'TypeError') { // TypeError usually means cancelled
+            showNotification('Unable to access contacts', 'error');
+          }
+        }
+      } else {
+        // Fallback for desktop/unsupported
+        showNotification('Contact Sync is only available on Mobile devices (Android/iOS)', 'info');
+      }
+    }
+
+    // handleGoogleAuth now implemented in module script
+
+    function updateUserUI() {
+      if (!window.currentUser) return;
+
+      const userType = document.getElementById('user-type');
+      const userName = document.getElementById('user-name');
+      const ownerBtn = document.getElementById('owner-btn');
+      const tenantBtn = document.getElementById('tenant-btn');
+      const signoutBtn = document.getElementById('signout-btn');
+
+      if (userType) userType.textContent = window.currentUser.type.toUpperCase();
+      if (userName) userName.textContent = window.currentUser.name || window.currentUser.displayName || window.currentUser.email;
+
+      if (window.currentUser.type === 'owner') {
+        if (ownerBtn) ownerBtn.style.display = 'block';
+        if (tenantBtn) tenantBtn.style.display = 'none';
+      } else {
+        if (ownerBtn) ownerBtn.style.display = 'none';
+        if (tenantBtn) tenantBtn.style.display = 'block';
+      }
+
+      if (signoutBtn) signoutBtn.style.display = 'block';
+    }
+
+    function signOut() {
+      window.signOutUser();
+    }
+
+    function goToOwner() {
+      window.location.href = 'owner.html';
+    }
+
+    function goToTenant() {
+      window.location.href = 'tenant.html';
+    }
+
+    function toggleTheme() {
+      darkMode = !darkMode;
+      const themeIcon = document.getElementById('theme-icon');
+      const themeText = document.getElementById('theme-text');
+
+      if (darkMode) {
+        document.body.setAttribute('data-theme', 'dark');
+        themeIcon.className = 'fas fa-sun';
+        themeText.textContent = 'Light Mode';
+      } else {
+        document.body.removeAttribute('data-theme');
+        themeIcon.className = 'fas fa-moon';
+        themeText.textContent = 'Dark Mode';
+      }
+    }
+
+    function toggleNotifications() {
+      notificationsEnabled = !notificationsEnabled;
+      const notificationText = document.getElementById('notification-text');
+      const notificationIcon = document.getElementById('notification-icon');
+
+      if (notificationsEnabled) {
+        notificationText.textContent = 'Notifications: ON';
+        notificationIcon.className = 'fas fa-bell';
+        showNotification('Notifications enabled', 'success');
+      } else {
+        notificationText.textContent = 'Notifications: OFF';
+        notificationIcon.className = 'fas fa-bell-slash';
+        showNotification('Notifications disabled', 'info');
+      }
+    }
+
+    function showNotification(message, type = 'info') {
+      if (!notificationsEnabled) return;
+
+      const notification = document.createElement('div');
+      notification.className = `notification notification-${type}`;
+      notification.innerHTML = `
+        <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i>
+        <span>${message}</span>
+      `;
+
+      notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: ${type === 'success' ? '#10b981' : type === 'error' ? '#ef4444' : '#3b82f6'};
+        color: white;
+        padding: 1rem 1.5rem;
+        border-radius: 10px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        z-index: 4000;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        animation: slideInRight 0.3s ease;
+      `;
+
+      document.body.appendChild(notification);
+
+      setTimeout(() => {
+        notification.style.animation = 'slideOutRight 0.3s ease';
+        setTimeout(() => notification.remove(), 300);
+      }, 3000);
+    }
+
+    // Add notification animations
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes slideInRight {
+        from {
+          transform: translateX(100%);
+          opacity: 0;
+        }
+        to {
+          transform: translateX(0);
+          opacity: 1;
+        }
+      }
+      
+      @keyframes slideOutRight {
+        from {
+          transform: translateX(0);
+          opacity: 1;
+        }
+        to {
+          transform: translateX(100%);
+          opacity: 0;
+        }
+      }
+    `;
+    document.head.appendChild(style);
+
+    // Close modal when clicking outside
+    document.getElementById('authModal').addEventListener('click', function (e) {
+      if (e.target === this) {
+        closeAuthModal();
+      }
+    });
+
+    // Smooth scrolling for navigation links
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+      anchor.addEventListener('click', function (e) {
+        e.preventDefault();
+        const target = document.querySelector(this.getAttribute('href'));
+        if (target) {
+          target.scrollIntoView({
+            behavior: 'smooth',
+            block: 'start'
+          });
+        }
+      });
+    });
+
+    // Scroll to section function
+    function scrollToSection(sectionId) {
+      const section = document.getElementById(sectionId);
+      if (section) {
+        section.scrollIntoView({
+          behavior: 'smooth',
+          block: 'start'
+        });
+      }
+    }
+
+    // AI API Configuration for index.html
+    const AI_CONFIG_INDEX = {
+      openai: {
+        apiKey: 'sk-proj-RENTIVA-DEMO-KEY-PLACEHOLDER',
+        model: 'gpt-3.5-turbo',
+        endpoint: 'https://api.openai.com/v1/chat/completions'
+      },
+      gemini: {
+        apiKey: 'AIzaSyBfHkRqYzWqL8XmN7pK6jT3sV9wU2xR5aZ', // Real Gemini API Key
+        model: 'gemini-pro',
+        endpoint: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent'
+      }
+    };
+
+    // AI responses for property management
+    const propertyResponses = {
+      'rent': 'For rent calculation: Base Rent + (Electricity Units × ₹10) + Water Charges = Total Rent. The Owner Portal automates this for you! 📊',
+      'tenant': 'Manage tenants efficiently! Add details, track payments, generate receipts, and send notifications - all in one dashboard. 👥',
+      'payment': 'Track payments in real-time! Get instant notifications when tenants pay, and generate professional receipts automatically. 💳',
+      'property': 'Manage unlimited properties! Each property can have multiple units with individual tenant tracking and payment history. 🏢',
+      'receipt': 'Generate professional PDF receipts instantly! Include property details, rent breakdown, and payment status. All receipts are saved automatically! 🧾',
+      'default': 'I\'m your AI property assistant! I can help with rent calculations, tenant management, payment tracking, and more. What would you like to know? 🏠'
+    };
+
+    // AI API call function
+    async function callAIIndex(message) {
+      try {
+        const response = await fetch('/api/chatbot', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message })
+        });
+        
+        if (!response.ok) {
+          throw new Error(`Server responded with ${response.status}`);
+        }
+
+        const data = await response.json();
+        return data.reply || data.error || "I'm sorry, I couldn't process that.";
+      } catch (error) {
+        console.error("Chatbot API Error:", error);
+        return "I'm having trouble connecting right now. Please try again later or check your connection.";
+      }
+    }
+
+    function addMessage(text, sender) {
+      const messagesContainer = document.getElementById('chat-messages');
+      if (!messagesContainer) return;
+
+      const messageDiv = document.createElement('div');
+      messageDiv.className = `message ${sender}`;
+      
+      // Simple format: convert newlines to <br> and handle bold text
+      const formattedText = text
+        .replace(/\n\n/g, '</p><p>')
+        .replace(/\n/g, '<br>')
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/^\* (.*)/gm, '• $1');
+
+      messageDiv.innerHTML = `
+        <div class="message-bubble">
+          ${formattedText}
+        </div>
+      `;
+      messagesContainer.appendChild(messageDiv);
+      messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+
+    // Fallback response function
+    function getFallbackResponseIndex(message) {
+      const lowerMessage = message.toLowerCase();
+      
+      for (const [key, response] of Object.entries(propertyResponses)) {
+        if (key !== 'default' && lowerMessage.includes(key)) {
+          return response;
+        }
+      }
+      
+      return propertyResponses.default;
+    }
+
+    // Enhanced chat functionality with AI
+    function sendAIMessage() {
+      const input = document.getElementById('ai-input');
+      const message = input.value.trim();
+      if (!message) return;
+
+      addMessage(message, 'user');
+      input.value = '';
+
+      // Show typing indicator
+      showTypingIndicator();
+
+      // Try AI API with fallback
+      callAIIndex(message)
+        .then(response => {
+          hideTypingIndicator();
+          addMessage(response, 'bot');
+        })
+        .catch(error => {
+          hideTypingIndicator();
+          addMessage(propertyResponses.default, 'bot');
+        });
+    }
+
+    function showTypingIndicator() {
+      const messagesContainer = document.getElementById('chat-messages');
+      if (!messagesContainer) return;
+
+      const typingDiv = document.createElement('div');
+      typingDiv.className = 'message bot typing-message';
+      typingDiv.innerHTML = `
+        <div class="message-bubble">
+          <div class="typing-indicator">
+            <span class="typing-dot"></span>
+            <span class="typing-dot"></span>
+            <span class="typing-dot"></span>
+          </div>
+        </div>
+      `;
+      messagesContainer.appendChild(typingDiv);
+      messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+
+    function hideTypingIndicator() {
+      const typingMessage = document.querySelector('.typing-message');
+      if (typingMessage) {
+        typingMessage.remove();
+      }
+    }
+
+    // Enter key support for AI chat
+    document.getElementById('ai-input').addEventListener('keypress', function (e) {
+      if (e.key === 'Enter') {
+        sendAIMessage();
+      }
+    });
+
+    // Navbar scroll effect
+    window.addEventListener('scroll', () => {
+      const navbar = document.getElementById('navbar');
+      if (window.scrollY > 50) {
+        navbar.style.background = 'rgba(17, 24, 39, 0.98)';
+        navbar.style.boxShadow = '0 10px 30px rgba(0, 0, 0, 0.1)';
+      } else {
+        navbar.style.background = 'rgba(17, 24, 39, 0.95)';
+        navbar.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.1)';
+      }
+    });
+
+    // Add parallax effect to hero section
+    window.addEventListener('scroll', () => {
+      const scrolled = window.pageYOffset;
+      const hero = document.querySelector('.hero');
+      if (hero) {
+        hero.style.transform = `translateY(${scrolled * 0.5}px)`;
+      }
+    });
+  </script>
+  <script src="/chat-widget.js"></script>
+  <script src="majestic-theme.js"></script>
+</body>
+
+</html>

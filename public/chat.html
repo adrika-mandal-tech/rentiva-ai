@@ -1,0 +1,875 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rentiva Galaxy Chat</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="rentiva-gradient.css">
+    <style>
+        body {
+            background-color: #020617;
+            background-image: 
+                radial-gradient(1px 1px at 20px 30px, rgba(255,255,255,0.8), transparent),
+                radial-gradient(1px 1px at 40px 70px, rgba(255,255,255,0.7), transparent),
+                radial-gradient(2px 2px at 50px 160px, rgba(255,255,255,0.9), transparent),
+                radial-gradient(1.5px 1.5px at 90px 40px, rgba(255,255,255,1), transparent),
+                radial-gradient(1px 1px at 130px 80px, rgba(255,255,255,0.6), transparent),
+                /* Nebula layer 1 */
+                radial-gradient(circle at 20% 30%, rgba(99, 102, 241, 0.15), transparent 40%),
+                /* Nebula layer 2 */
+                radial-gradient(circle at 80% 70%, rgba(168, 85, 247, 0.15), transparent 40%),
+                /* Base gradient */
+                linear-gradient(135deg, #020617 0%, #0f172a 100%);
+            background-repeat: repeat, repeat, repeat, repeat, repeat, no-repeat, no-repeat, no-repeat;
+            background-size: 250px 250px, 350px 350px, 400px 400px, 450px 450px, 500px 500px, 100% 100%, 100% 100%, 100% 100%;
+            animation: galaxyMotion 120s linear infinite alternate;
+            color: white;
+            font-family: 'Inter', sans-serif;
+            height: 100vh;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+        }
+
+        body::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background-image: 
+                radial-gradient(1px 1px at 100px 100px, white, transparent),
+                radial-gradient(1px 1px at 200px 300px, white, transparent),
+                radial-gradient(2px 2px at 300px 200px, white, transparent);
+            background-size: 500px 500px;
+            opacity: 0.3;
+            animation: twinkling 4s ease-in-out infinite alternate;
+            pointer-events: none;
+        }
+        
+        @keyframes galaxyMotion {
+            0% { 
+                background-position: 0 0, 0 0, 0 0, 0 0, 0 0, 0% 0%, 100% 100%, 0 0; 
+            }
+            100% { 
+                background-position: 500px 1000px, 400px 800px, 300px 600px, 200px 400px, 100px 200px, 100% 100%, 0% 0%, 0 0; 
+            }
+        }
+
+        @keyframes twinkling {
+            0% { opacity: 0.2; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.1); }
+            100% { opacity: 0.2; transform: scale(1); }
+        }
+        
+        .message-bubble {
+            animation: fadeIn 0.3s ease-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        #emoji-picker-container {
+            position: absolute;
+            bottom: 90px;
+            left: 20px;
+            z-index: 1000;
+            background: rgba(15, 23, 42, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 8px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+        }
+        
+        .emoji-close-btn {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            width: 24px;
+            height: 24px;
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            border-radius: 50%;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s;
+        }
+        
+        .emoji-close-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        
+        .emoji-btn {
+            width: 32px;
+            height: 32px;
+            border: none;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .emoji-btn:hover {
+            background: rgba(255, 255, 255, 0.15);
+            transform: scale(1.1);
+        }
+        
+        .contacts-sidebar {
+            width: 320px;
+            background: rgba(15, 23, 42, 0.7);
+            -webkit-backdrop-filter: blur(24px);
+            backdrop-filter: blur(24px);
+            border-left: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            flex-direction: column;
+            transition: all 0.3s ease;
+            z-index: 30;
+        }
+        
+        @media (max-width: 768px) {
+            .contacts-sidebar {
+                position: fixed;
+                right: -320px;
+                height: 100%;
+                box-shadow: -10px 0 30px rgba(0, 0, 0, 0.5);
+            }
+            .contacts-sidebar.active {
+                right: 0;
+            }
+        }
+        
+        .otp-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+        
+        .otp-modal.active {
+            display: flex;
+        }
+        
+        .otp-input {
+            width: 50px;
+            height: 50px;
+            text-align: center;
+            font-size: 24px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            color: white;
+            margin: 0 5px;
+        }
+        
+        .otp-input:focus {
+            border-color: #6366f1;
+            outline: none;
+        }
+        
+        .sync-animation {
+            animation: spin 2s linear infinite;
+        }
+        
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <!-- Main Container -->
+    <div class="flex flex-1 overflow-hidden relative">
+        <!-- Main Chat Area -->
+        <div class="flex-1 flex flex-col h-full">
+            <!-- Header -->
+            <header class="bg-black/20 backdrop-blur-lg border-b border-white/10 px-6 py-4">
+                <div class="flex items-center gap-4">
+                    <button
+                        class="md:hidden w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-white"
+                        onclick="document.getElementById('contacts-sidebar').classList.toggle('active')"
+                        title="Toggle contacts">
+                        <i class="fas fa-users"></i>
+                    </button>
+                    <div class="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center text-white shadow-lg">
+                        <i class="fas fa-robot text-xl"></i>
+                    </div>
+                    <div class="flex-1">
+                        <h1 class="text-xl font-bold uppercase tracking-wider" style="background: linear-gradient(135deg, #06b6d4 0%, #0ea5e9 50%, #eab308 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; color: transparent; display: inline-block;">RENTIVA CHAT</h1>
+                        <div class="text-xs text-green-400">AI • Online • <span id="online-count">0 Online</span></div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button onclick="syncContacts()" 
+                            class="w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-slate-400 hover:text-white transition-colors"
+                            title="Sync Contacts">
+                            <i class="fas fa-sync-alt" id="sync-icon"></i>
+                        </button>
+                        <button onclick="showOTPModal()" 
+                            class="w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-slate-400 hover:text-white transition-colors"
+                            title="Verify OTP">
+                            <i class="fas fa-shield-alt"></i>
+                        </button>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Chat Container -->
+            <main id="chat-container" class="flex-1 overflow-y-auto p-6">
+                <div class="flex flex-col items-center justify-center py-10 opacity-50">
+                    <div class="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mb-4">
+                        <i class="fas fa-robot text-2xl text-slate-400"></i>
+                    </div>
+                    <p class="text-sm text-slate-400 mb-2">Welcome to Rentiva Galaxy Chat! 🚀</p>
+                    <p class="text-xs text-slate-500">Type a message below or select a contact to start chatting</p>
+                </div>
+            </main>
+
+            <!-- Emoji Picker -->
+            <div id="emoji-picker-container" style="display: none;">
+                <div class="emoji-close-btn" onclick="closeEmojiPicker()">
+                    <i class="fas fa-times text-xs"></i>
+                </div>
+                
+                <!-- Fallback Emojis -->
+                <div class="fallback-emojis">
+                    <div class="text-xs text-slate-400 mb-2">Quick Emojis:</div>
+                    <div class="grid grid-cols-8 gap-1">
+                        <button onclick="addEmoji('😊')" class="emoji-btn">😊</button>
+                        <button onclick="addEmoji('😂')" class="emoji-btn">😂</button>
+                        <button onclick="addEmoji('❤️')" class="emoji-btn">❤️</button>
+                        <button onclick="addEmoji('👍')" class="emoji-btn">👍</button>
+                        <button onclick="addEmoji('🎉')" class="emoji-btn">🎉</button>
+                        <button onclick="addEmoji('🔥')" class="emoji-btn">🔥</button>
+                        <button onclick="addEmoji('💯')" class="emoji-btn">💯</button>
+                        <button onclick="addEmoji('🚀')" class="emoji-btn">🚀</button>
+                        <button onclick="addEmoji('🏠')" class="emoji-btn">🏠</button>
+                        <button onclick="addEmoji('💰')" class="emoji-btn">💰</button>
+                        <button onclick="addEmoji('📊')" class="emoji-btn">📊</button>
+                        <button onclick="addEmoji('🧾')" class="emoji-btn">🧾</button>
+                        <button onclick="addEmoji('👥')" class="emoji-btn">👥</button>
+                        <button onclick="addEmoji('📱')" class="emoji-btn">📱</button>
+                        <button onclick="addEmoji('🔔')" class="emoji-btn">🔔</button>
+                        <button onclick="addEmoji('🔒')" class="emoji-btn">🔒</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Input Area -->
+            <footer class="bg-black/20 backdrop-blur-lg border-t border-white/10 p-4">
+                <form id="chat-form" class="w-full max-w-6xl mx-auto flex items-end gap-3 px-2">
+                    <div class="flex-1 flex gap-2 w-full">
+                        <div class="relative w-full bg-black/20 rounded-3xl border border-white/10 p-1.5 flex items-center">
+                            <textarea id="message-input" rows="1" 
+                                placeholder="Type your message here... Press Enter to send, Shift+Enter for new line. Try asking about rent calculation, tenant management, or property features! 🏠💡"
+                                class="w-full bg-transparent border-0 px-4 py-3 outline-none text-white placeholder-slate-400 resize-none max-h-32 rounded-2xl text-base"></textarea>
+                            
+                            <div class="flex items-center gap-1 px-2">
+                                <input type="file" id="file-upload" class="hidden" accept="image/*,video/*,.doc,.docx,.pdf"/>
+                                <button type="button" id="attachment-btn"
+                                    class="w-9 h-9 rounded-full hover:bg-white/10 text-slate-400 hover:text-indigo-400 transition-colors flex items-center justify-center -mr-1"
+                                    title="Attach File" onclick="document.getElementById('file-upload').click()">
+                                    <i class="fas fa-paperclip text-lg"></i>
+                                </button>
+                                <button type="button" id="emoji-btn"
+                                    class="w-9 h-9 rounded-full hover:bg-white/10 text-slate-400 hover:text-indigo-400 transition-colors flex items-center justify-center"
+                                    title="Add emoji">
+                                    <i class="far fa-face-smile text-lg"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="submit" id="send-btn" disabled
+                        class="bg-gradient-to-tr from-indigo-600 to-purple-600 text-white w-14 h-14 rounded-full shadow-lg hover:shadow-indigo-600/50 hover:scale-105 active:scale-95 disabled:opacity-50 disabled:scale-100 transition-all flex items-center justify-center"
+                        title="Send message">
+                        <i class="fas fa-paper-plane text-lg"></i>
+                    </button>
+                </form>
+            </footer>
+        </div>
+
+        <!-- Contacts Sidebar -->
+        <aside class="contacts-sidebar" id="contacts-sidebar">
+            <div class="p-5 border-b border-white/10 flex items-center justify-between">
+                <div>
+                    <h2 class="text-white font-bold text-lg">Contacts</h2>
+                    <p class="text-[10px] text-green-400 font-medium tracking-wide mt-1 uppercase" id="online-count-sidebar">0 Online</p>
+                </div>
+                <button
+                    class="md:hidden w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-slate-400 hover:text-white transition-colors"
+                    onclick="document.getElementById('contacts-sidebar').classList.remove('active')"
+                    title="Close contacts">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div class="p-4 border-b border-white/10">
+                <button onclick="syncContacts()" 
+                    class="w-full py-2.5 rounded-xl bg-gradient-to-r from-indigo-500/20 to-purple-500/20 hover:from-indigo-500/30 hover:to-purple-500/30 border border-indigo-500/30 text-indigo-300 font-medium text-sm flex items-center justify-center gap-2 transition-all">
+                    <i class="fas fa-sync-alt" id="sync-icon-sidebar"></i> Sync Contacts
+                </button>
+            </div>
+
+            <div class="flex-1 overflow-y-auto p-3 flex flex-col gap-1" id="contacts-list">
+                <div class="text-center p-4 text-xs text-slate-500 italic">
+                    <i class="fas fa-spinner fa-spin mb-2"></i><br>
+                    Syncing contacts...
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <!-- OTP Modal -->
+    <div id="otp-modal" class="otp-modal">
+        <div class="bg-gray-800 rounded-2xl p-8 max-w-md w-full mx-4 border border-white/10">
+            <div class="text-center mb-6">
+                <div class="w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-shield-alt text-2xl text-white"></i>
+                </div>
+                <h3 class="text-xl font-bold text-white mb-2">Verify Your Identity</h3>
+                <p class="text-slate-400 text-sm">Enter the 6-digit code sent to your device</p>
+            </div>
+            
+            <div class="flex justify-center gap-2 mb-6">
+                <input type="text" maxlength="1" class="otp-input" id="otp-1">
+                <input type="text" maxlength="1" class="otp-input" id="otp-2">
+                <input type="text" maxlength="1" class="otp-input" id="otp-3">
+                <input type="text" maxlength="1" class="otp-input" id="otp-4">
+                <input type="text" maxlength="1" class="otp-input" id="otp-5">
+                <input type="text" maxlength="1" class="otp-input" id="otp-6">
+            </div>
+            
+            <div class="flex gap-3">
+                <button onclick="verifyOTP()" 
+                    class="flex-1 bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3 rounded-xl font-medium hover:shadow-lg transition-all">
+                    Verify
+                </button>
+                <button onclick="closeOTPModal()" 
+                    class="flex-1 bg-gray-700 text-white py-3 rounded-xl font-medium hover:bg-gray-600 transition-all">
+                    Cancel
+                </button>
+            </div>
+            
+            <div class="text-center mt-4">
+                <button onclick="resendOTP()" class="text-indigo-400 text-sm hover:text-indigo-300 transition-colors">
+                    Didn't receive code? Resend
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ENHANCED CHAT WITH CONTACT SYNCING AND OTP
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Enhanced chat loaded!');
+            
+            // Get elements
+            const messageInput = document.getElementById('message-input');
+            const chatForm = document.getElementById('chat-form');
+            const sendBtn = document.getElementById('send-btn');
+            const emojiBtn = document.getElementById('emoji-btn');
+            const emojiPicker = document.getElementById('emoji-picker-container');
+            const chatContainer = document.getElementById('chat-container');
+            const contactsList = document.getElementById('contacts-list');
+            const onlineCount = document.getElementById('online-count');
+            const onlineCountSidebar = document.getElementById('online-count-sidebar');
+            
+            // Initialize contacts
+            setTimeout(() => {
+                syncContacts();
+            }, 1000);
+            
+            // SEND BUTTON FUNCTIONALITY
+            if (sendBtn && chatForm && messageInput) {
+                messageInput.addEventListener('input', function() {
+                    sendBtn.disabled = !this.value.trim();
+                    // Auto-resize textarea
+                    this.style.height = 'auto';
+                    this.style.height = Math.min(this.scrollHeight, 128) + 'px';
+                    if (window.socket) window.socket.emit('typing', true);
+                });
+                
+                messageInput.addEventListener('blur', function() {
+                    if (window.socket) window.socket.emit('typing', false);
+                });
+                
+                chatForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    const text = messageInput.value.trim();
+                    if (!text) return;
+                    
+                    console.log('SENDING MESSAGE:', text);
+                    
+                    messageInput.value = '';
+                    messageInput.style.height = 'auto';
+                    sendBtn.disabled = true;
+                    
+                    if (chatContainer.querySelector('.opacity-50')) {
+                        chatContainer.innerHTML = '';
+                    }
+                    
+                    // Add user message
+                    const messageDiv = document.createElement('div');
+                    messageDiv.className = 'flex flex-col mb-6 items-end message-bubble';
+                    const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                    messageDiv.innerHTML = `
+                        <div class="flex items-end gap-2 max-w-[85%] flex-row-reverse">
+                            <div class="bg-blue-600 text-white rounded-2xl px-4 py-2 max-w-full">
+                                <p class="break-words">${text}</p>
+                                <div class="flex items-center gap-2 mt-1">
+                                    <span class="text-[10px] opacity-70">${time}</span>
+                                    <i class="fas fa-check text-[10px] opacity-70"></i>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    chatContainer.appendChild(messageDiv);
+                    chatContainer.scrollTop = chatContainer.scrollHeight;
+                    
+                    if (window.socket) window.socket.emit('typing', false);
+                    
+                    // Enhanced AI responses
+                    setTimeout(async () => {
+                        let aiResponse;
+                        try {
+                            const botRes = await fetch('/api/chatbot', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ message: text })
+                            });
+                            const data = await botRes.json();
+                            aiResponse = data.reply || getAIResponse(text);
+                        } catch (err) {
+                            aiResponse = getAIResponse(text); // Fallback
+                        }
+                        
+                        const aiDiv = document.createElement('div');
+                        aiDiv.className = 'flex flex-col mb-6 items-start message-bubble';
+                        const aiTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                        aiDiv.innerHTML = `
+                            <div class="flex items-end gap-2 max-w-[85%]">
+                                <div class="w-8 h-8 rounded-full bg-gradient-to-br from-fuchsia-500 to-pink-500 flex items-center justify-center text-xs font-bold shadow-lg">
+                                    <i class="fas fa-robot"></i>
+                                </div>
+                                <div class="bg-gray-700 text-white rounded-2xl px-4 py-2 max-w-full">
+                                    <p class="break-words">${aiResponse.replace(/\n/g, '<br>')}</p>
+                                    <div class="flex items-center gap-2 mt-1">
+                                        <span class="text-[10px] opacity-70">${aiTime}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        chatContainer.appendChild(aiDiv);
+                        chatContainer.scrollTop = chatContainer.scrollHeight;
+                    }, 1000);
+                });
+                
+                console.log('✅ SEND BUTTON WORKING!');
+            }
+            
+            // EMOJI BUTTON FUNCTIONALITY
+            if (emojiBtn && emojiPicker) {
+                emojiBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('EMOJI BUTTON CLICKED!');
+                    
+                    const isVisible = emojiPicker.style.display === 'block';
+                    emojiPicker.style.display = isVisible ? 'none' : 'block';
+                });
+                
+                window.closeEmojiPicker = function() {
+                    emojiPicker.style.display = 'none';
+                };
+                
+                window.addEmoji = function(emoji) {
+                    if (messageInput) {
+                        messageInput.value += emoji;
+                        messageInput.focus();
+                        closeEmojiPicker();
+                        sendBtn.disabled = !messageInput.value.trim();
+                    }
+                };
+                
+                document.addEventListener('click', function(e) {
+                    if (!emojiPicker.contains(e.target) && e.target !== emojiBtn) {
+                        emojiPicker.style.display = 'none';
+                    }
+                });
+                
+                console.log('✅ EMOJI BUTTON WORKING!');
+            }
+            
+            // OTP Input Handling
+            const otpInputs = document.querySelectorAll('.otp-input');
+            otpInputs.forEach((input, index) => {
+                input.addEventListener('input', function(e) {
+                    if (e.target.value.length === 1) {
+                        if (index < otpInputs.length - 1) {
+                            otpInputs[index + 1].focus();
+                        }
+                    }
+                });
+                
+                input.addEventListener('keydown', function(e) {
+                    if (e.key === 'Backspace' && e.target.value === '' && index > 0) {
+                        otpInputs[index - 1].focus();
+                    }
+                });
+                
+                input.addEventListener('paste', function(e) {
+                    e.preventDefault();
+                    const pastedData = e.clipboardData.getData('text').slice(0, 6);
+                    for (let i = 0; i < pastedData.length && i < otpInputs.length; i++) {
+                        otpInputs[i].value = pastedData[i];
+                    }
+                    if (pastedData.length < otpInputs.length) {
+                        otpInputs[pastedData.length].focus();
+                    }
+                });
+            });
+            
+            // FILE UPLOAD FUNCTIONALITY
+            const fileUpload = document.getElementById('file-upload');
+            if (fileUpload) {
+                fileUpload.addEventListener('change', (e) => {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    
+                    const reader = new FileReader();
+                    reader.onload = function(event) {
+                        const base64 = event.target.result;
+                        // Use Socket.io if available to upload
+                        if (window.socket) {
+                            window.socket.emit('fileUpload', {
+                                file: base64,
+                                fileType: file.type,
+                                fileName: file.name,
+                                conversationId: 'global',
+                                senderId: window.currentUser ? window.currentUser.uid : 'anon',
+                                user: window.currentUser ? window.currentUser.displayName : 'You'
+                            });
+                        }
+                        
+                        // Immediately append a local bubble for UX
+                        const messageDiv = document.createElement('div');
+                        messageDiv.className = 'flex flex-col mb-6 items-end message-bubble';
+                        const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                        let mediaHtml = '';
+                        if (file.type.startsWith('image/')) {
+                            mediaHtml = `<img src="${base64}" class="w-48 rounded-lg mb-2 shadow-sm" alt="Upload">`;
+                        } else {
+                            mediaHtml = `<div class="bg-gray-800 p-2 rounded-lg mb-2 text-sm max-w-[200px] truncate"><i class="fas fa-file mr-2"></i>${file.name}</div>`;
+                        }
+                        messageDiv.innerHTML = `
+                            <div class="flex items-end gap-2 max-w-[85%] flex-row-reverse">
+                                <div class="bg-blue-600 text-white rounded-2xl px-4 py-2 max-w-full">
+                                    ${mediaHtml}
+                                    <div class="flex items-center justify-end gap-2 mt-1">
+                                        <span class="text-[10px] opacity-70">${time}</span>
+                                        <i class="fas fa-check text-[10px] opacity-70"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        chatContainer.appendChild(messageDiv);
+                        chatContainer.scrollTop = chatContainer.scrollHeight;
+                    };
+                    reader.readAsDataURL(file);
+                });
+            }
+
+            if (sendBtn) {
+                sendBtn.disabled = true;
+            }
+            
+            // INIT SOCKET.IO
+            try {
+                if (typeof io !== 'undefined') {
+                    window.socket = io();
+                    
+                    const typingIndicator = document.createElement('div');
+                    typingIndicator.id = 'typing-indicator';
+                    typingIndicator.className = 'text-xs text-indigo-400 italic mb-2 hidden transition-all duration-300';
+                    typingIndicator.innerHTML = '<i class="fas fa-pen fa-sm mr-1"></i> Someone is typing...';
+                    
+                    const chatContainer = document.getElementById('chat-container');
+                    chatContainer.appendChild(typingIndicator);
+                    
+                    let typingTimer;
+                    window.socket.on('typing', (data) => {
+                        // Skip if it's us or data is false
+                        if (!data) {
+                            typingIndicator.classList.add('hidden');
+                            return;
+                        }
+                        
+                        typingIndicator.classList.remove('hidden');
+                        chatContainer.scrollTop = chatContainer.scrollHeight;
+                        
+                        clearTimeout(typingTimer);
+                        typingTimer = setTimeout(() => {
+                            typingIndicator.classList.add('hidden');
+                        }, 3000);
+                    });
+                }
+            } catch(e) {
+                console.warn('Socket.io not established in chat.html');
+            }
+            
+            console.log('Enhanced chat initialization completed!');
+        });
+        
+        // CONTACT SYNCING FUNCTIONALITY
+        function syncContacts() {
+            console.log('Syncing contacts...');
+            
+            // Show sync animation
+            const syncIcon = document.getElementById('sync-icon');
+            const syncIconSidebar = document.getElementById('sync-icon-sidebar');
+            
+            if (syncIcon) syncIcon.classList.add('sync-animation');
+            if (syncIconSidebar) syncIconSidebar.classList.add('sync-animation');
+            
+            // Simulate contact syncing
+            setTimeout(() => {
+                const contacts = [
+                    { id: 'ai-bot', name: 'Rentiva AI', role: 'AI Assistant', status: 'online', avatar: '🤖' },
+                    { id: 'owner-1', name: 'Property Owner', role: 'Owner', status: 'online', avatar: '👔' },
+                    { id: 'tenant-1', name: 'John Tenant', role: 'Tenant', status: 'online', avatar: '👤' },
+                    { id: 'tenant-2', name: 'Sarah Tenant', role: 'Tenant', status: 'away', avatar: '👩' },
+                    { id: 'manager-1', name: 'Property Manager', role: 'Manager', status: 'online', avatar: '👨‍💼' },
+                    { id: 'maintenance-1', name: 'Maintenance Team', role: 'Maintenance', status: 'offline', avatar: '🔧' }
+                ];
+                
+                displayContacts(contacts);
+                
+                // Remove sync animation
+                if (syncIcon) syncIcon.classList.remove('sync-animation');
+                if (syncIconSidebar) syncIconSidebar.classList.remove('sync-animation');
+                
+                // Update online count
+                const onlineCount = contacts.filter(c => c.status === 'online').length;
+                document.getElementById('online-count').textContent = `${onlineCount} Online`;
+                document.getElementById('online-count-sidebar').textContent = `${onlineCount} Online`;
+                
+                console.log('Contacts synced successfully!');
+            }, 2000);
+        }
+        
+        function displayContacts(contacts) {
+            const contactsList = document.getElementById('contacts-list');
+            if (!contactsList) return;
+            
+            contactsList.innerHTML = '';
+            
+            contacts.forEach(contact => {
+                const contactDiv = document.createElement('div');
+                contactDiv.className = 'flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 transition-colors cursor-pointer border border-transparent hover:border-white/10 group';
+                contactDiv.onclick = () => selectContact(contact);
+                
+                const statusColor = contact.status === 'online' ? 'bg-green-500' : 
+                                  contact.status === 'away' ? 'bg-yellow-500' : 'bg-gray-500';
+                
+                contactDiv.innerHTML = `
+                    <div class="relative">
+                        <div class="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500/50 to-purple-500/50 flex items-center justify-center text-lg shadow-lg">
+                            ${contact.avatar}
+                        </div>
+                        <div class="absolute bottom-0 right-0 w-3 h-3 ${statusColor} rounded-full border-2 border-[#0f172a]"></div>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="font-medium text-sm text-white truncate">${contact.name}</div>
+                        <div class="text-[10px] text-slate-400 truncate flex items-center gap-1">
+                            <i class="fas fa-shield-alt text-[8px] opacity-70"></i> ${contact.role}
+                        </div>
+                    </div>
+                `;
+                
+                contactsList.appendChild(contactDiv);
+            });
+        }
+        
+        function selectContact(contact) {
+            console.log('Selected contact:', contact.name);
+            
+            const chatContainer = document.getElementById('chat-container');
+            if (!chatContainer) return;
+            
+            // Clear existing messages
+            chatContainer.innerHTML = '';
+            
+            // Add contact header
+            const headerDiv = document.createElement('div');
+            headerDiv.className = 'text-center mb-6 pb-4 border-b border-white/10';
+            headerDiv.innerHTML = `
+                <div class="flex items-center justify-center gap-3 mb-2">
+                    <div class="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-500/50 to-purple-500/50 flex items-center justify-center text-xl">
+                        ${contact.avatar}
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-bold text-white">${contact.name}</h3>
+                        <p class="text-sm text-slate-400">${contact.role} • ${contact.status}</p>
+                    </div>
+                </div>
+            `;
+            chatContainer.appendChild(headerDiv);
+            
+            if (window.socket) {
+                window.socket.emit('markRead', { conversationId: contact.id });
+            }
+            
+            // Add demo messages
+            const demoMessages = contact.id === 'ai-bot' ? [
+                { sender: contact.name, text: 'Hello! I\'m Rentiva AI, your property management assistant. How can I help you today? 🏠', isOther: true },
+                { sender: 'You', text: 'Hi! I need help with rent calculation', isOther: false },
+                { sender: contact.name, text: 'I can help you calculate rent automatically! Just provide:\n• Base rent amount\n• Electricity meter readings\n• Water charges\n\nRENTIVA will handle all the calculations for you! 📊💡', isOther: true }
+            ] : [
+                { sender: contact.name, text: `Hey! This is ${contact.name}. How can I help you today?`, isOther: true },
+                { sender: 'You', text: 'Hi! I wanted to ask about the property features', isOther: false },
+                { sender: contact.name, text: `Our property includes:\n• 24/7 Security\n• Automated rent collection\n• Predictive maintenance\n• Real-time dashboard\n\nWhat would you like to know more about?`, isOther: true }
+            ];
+            
+            demoMessages.forEach((msg, index) => {
+                setTimeout(() => {
+                    addMessageToChat(msg.sender, msg.text, msg.isOther);
+                }, index * 1000);
+            });
+        }
+        
+        function addMessageToChat(sender, text, isOther) {
+            const chatContainer = document.getElementById('chat-container');
+            if (!chatContainer) return;
+            
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `flex flex-col mb-6 ${isOther ? 'items-start' : 'items-end'} message-bubble`;
+            
+            const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            
+            messageDiv.innerHTML = `
+                <div class="flex items-end gap-2 max-w-[85%] ${isOther ? 'flex-row' : 'flex-row-reverse'}">
+                    ${isOther ? `
+                        <div class="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-xs font-bold shadow-lg">
+                            ${sender[0].toUpperCase()}
+                        </div>
+                    ` : ''}
+                    <div class="${isOther ? 'bg-gray-700' : 'bg-blue-600'} text-white rounded-2xl px-4 py-2 max-w-full">
+                        <p class="break-words">${text.replace(/\n/g, '<br>')}</p>
+                        <div class="flex items-center gap-2 mt-1">
+                            <span class="text-[10px] opacity-70">${time}</span>
+                            ${!isOther ? '<i class="fas fa-check text-[10px] opacity-70"></i>' : ''}
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            chatContainer.appendChild(messageDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+        
+        // OTP FUNCTIONALITY
+        function showOTPModal() {
+            const modal = document.getElementById('otp-modal');
+            if (modal) {
+                modal.classList.add('active');
+                // Clear previous inputs
+                document.querySelectorAll('.otp-input').forEach(input => input.value = '');
+                document.getElementById('otp-1').focus();
+                
+                // Simulate sending OTP
+                console.log('OTP sent to device');
+            }
+        }
+        
+        function closeOTPModal() {
+            const modal = document.getElementById('otp-modal');
+            if (modal) {
+                modal.classList.remove('active');
+            }
+        }
+        
+        function verifyOTP() {
+            const otpInputs = document.querySelectorAll('.otp-input');
+            const otp = Array.from(otpInputs).map(input => input.value).join('');
+            
+            if (otp.length === 6) {
+                console.log('Verifying OTP:', otp);
+                
+                // Simulate verification
+                setTimeout(() => {
+                    if (otp === '123456') {
+                        alert('✅ Identity verified successfully!');
+                        closeOTPModal();
+                    } else {
+                        alert('❌ Invalid OTP. Please try again.');
+                        // Clear inputs
+                        otpInputs.forEach(input => input.value = '');
+                        document.getElementById('otp-1').focus();
+                    }
+                }, 1000);
+            } else {
+                alert('Please enter all 6 digits');
+            }
+        }
+        
+        function resendOTP() {
+            console.log('Resending OTP...');
+            // Clear inputs and focus first
+            document.querySelectorAll('.otp-input').forEach(input => input.value = '');
+            document.getElementById('otp-1').focus();
+            
+            // Simulate resend
+            setTimeout(() => {
+                alert('📱 New OTP sent to your device');
+            }, 1000);
+        }
+        
+        // Enhanced AI Response Function
+        function getAIResponse(message) {
+            const lowerMessage = message.toLowerCase();
+            
+            if (lowerMessage.includes('hello') || lowerMessage.includes('hi')) {
+                return 'Hello! I\'m Rentiva AI, your property management assistant. How can I help you today? 🏠\n\nI can assist with:\n• Rent calculations 💰\n• Tenant management 👥\n• Property maintenance 🔧\n• Receipt generation 🧾';
+            }
+            
+            if (lowerMessage.includes('rent')) {
+                return 'For rent calculation, I can help you with:\n\n📊 **Rent Formula**:\nBase Rent + (Electricity Units × ₹10) + Water Charges = Total Rent\n\n🏠 **Features**:\n• Automatic meter reading integration\n• Monthly rent statements\n• Payment reminders\n• Late fee calculations\n\nWould you like me to help you calculate specific rent amounts?';
+            }
+            
+            if (lowerMessage.includes('tenant')) {
+                return 'Tenant management made easy! 👥\n\n✅ **What I can help with**:\n• Adding new tenants\n• Tracking rent payments\n• Generating receipts\n• Sending notifications\n• Managing lease agreements\n\n📱 **RENTIVA Features**:\n• Real-time payment tracking\n• Automated receipts\n• Tenant communication portal\n• Maintenance request handling\n\nHow can I assist with tenant management?';
+            }
+            
+            if (lowerMessage.includes('receipt')) {
+                return 'Professional receipt generation! 🧾\n\n📄 **Receipt Features**:\n• Automatic PDF generation\n• Property details included\n• Rent breakdown displayed\n• Payment status tracking\n• Email delivery options\n\n💡 **Benefits**:\n• Professional appearance\n• Tax-compliant formatting\n• Instant delivery\n• Digital storage\n\nNeed help generating a specific receipt?';
+            }
+            
+            if (lowerMessage.includes('maintenance')) {
+                return 'Predictive maintenance system! 🔧\n\n🔨 **Maintenance Features**:\n• Automated issue detection\n• Priority-based scheduling\n• Vendor coordination\n• Cost tracking\n• Completion reporting\n\n📊 **Benefits**:\n• Prevent costly repairs\n• Extend property lifespan\n• Happy tenants\n• Efficient operations\n\nWhat maintenance issues can I help you with?';
+            }
+            
+            return 'I\'m here to help with property management! 🏠\n\nTry asking me about:\n• 💰 Rent calculation\n• 👥 Tenant management\n• 🧾 Receipt generation\n• 🔧 Maintenance requests\n• 📊 Property analytics\n\nWhat would you like to know more about?';
+        }
+        
+
+    </script>
+    <script src="/socket.io/socket.io.js"></script>
+</body>
+</html>
