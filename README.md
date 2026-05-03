@@ -2,13 +2,11 @@
 
 ### 🚀 The Intelligent Operating System for Rental Management
 
-> Stop chasing rent. Start managing it intelligently.
+>Stop chasing rent. Start managing it intelligently.
 
 **RENTIVA.ai** is an AI-powered rent management platform that automates payments, generates smart documents, and provides deep data insights for landlords and tenants.
 
 It’s not just a management tool — it’s a **decision-making system powered by AI.**
-
----
 
 ## 🚨 Problem Statement
 
@@ -22,8 +20,6 @@ The rental ecosystem is still outdated and inefficient:
 
 👉 Result: **Money loss, disputes, and inefficiency**
 
----
-
 ## 🎯 Objective
 
 To build a **centralized AI-powered system** that:
@@ -33,8 +29,6 @@ To build a **centralized AI-powered system** that:
 * Ensures transparency
 * Reduces disputes
 * Scales efficiently
-
----
 
 ## 🚀 Features
 
@@ -64,12 +58,16 @@ To build a **centralized AI-powered system** that:
 * 🤖 **AI Document Generator:**
   Generate rental agreements, notices, and legal documents automatically
 
-* 📊 **AI Data Analytics Dashboard:**
-  Smart insights on:
+* 📊 **AI-Powered Real Estate Data Analytics Dashboard:**
+  An intelligent data analysis module where users can **upload real estate datasets** and interact with them dynamically:
 
-  * Payment trends
-  * Late rent patterns
-  * Revenue analysis
+  * 📁 Upload and process property datasets
+  * 📈 Automatic **data visualization & exploratory analysis**
+  * 🧠 AI-driven **data interpretation and insights generation**
+  * 📊 Identify trends in pricing, demand, and rental patterns
+  * 📍 Query market prices based on **location-specific data**
+  * 💬 Ask natural language questions related to the dataset
+  * 🔍 Get instant answers and insights powered by AI
 
 * 🔔 **Smart Reminders & Alerts:**
   Automated notifications for rent deadlines and dues
@@ -79,8 +77,6 @@ To build a **centralized AI-powered system** that:
 
 * 📁 **Secure Cloud Storage:**
   Store agreements, receipts, and records safely with easy access
-
----
 
 ## 🏗️ Tech Stack
 
@@ -93,29 +89,21 @@ To build a **centralized AI-powered system** that:
 ![HTML5](https://img.shields.io/badge/HTML5-E34F26?style=for-the-badge\&logo=html5\&logoColor=white)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge\&logo=tailwind-css\&logoColor=white)
 
----
-
 ### ⚙️ Backend
 
 ![Node.js](https://img.shields.io/badge/Node.js-339933?style=for-the-badge\&logo=nodedotjs\&logoColor=white)
 ![Express.js](https://img.shields.io/badge/Express.js-000000?style=for-the-badge\&logo=express\&logoColor=white)
-
----
 
 ### 💳 Payment Gateways
 
 ![Razorpay](https://img.shields.io/badge/Razorpay-02042B?style=for-the-badge\&logo=razorpay\&logoColor=00AEEF)
 ![Cashfree](https://img.shields.io/badge/Cashfree-0A1F44?style=for-the-badge\&logo=cashfree\&logoColor=white)
 
----
-
 ### 🗄️ Database & Cloud
 
 ![Firebase](https://img.shields.io/badge/Firebase-FFCA28?style=for-the-badge\&logo=firebase\&logoColor=black)
 ![Firestore](https://img.shields.io/badge/Firestore-FFA000?style=for-the-badge\&logo=firebase\&logoColor=white)
 ![Vercel](https://img.shields.io/badge/Vercel-000000?style=for-the-badge\&logo=vercel\&logoColor=white)
-
----
 
 ### 🤖 AI & Data Analytics
 
@@ -124,29 +112,20 @@ To build a **centralized AI-powered system** that:
 ![Scikit-Learn](https://img.shields.io/badge/Scikit--Learn-F7931E?style=for-the-badge\&logo=scikitlearn\&logoColor=white)
 ![Streamlit](https://img.shields.io/badge/Streamlit-FF4B4B?style=for-the-badge\&logo=streamlit\&logoColor=white)
 
----
-
 ### 🧠 AI APIs
 
 ![OpenAI](https://img.shields.io/badge/OpenAI-412991?style=for-the-badge\&logo=openai\&logoColor=white)
 ![Google Gemini](https://img.shields.io/badge/Gemini_AI-4285F4?style=for-the-badge\&logo=google\&logoColor=white)
 ![Groq](https://img.shields.io/badge/Groq-000000?style=for-the-badge\&logo=groq\&logoColor=white)
 
----
-
 ### 🔐 Authentication
 
 ![Firebase Auth](https://img.shields.io/badge/Firebase_Auth-FFCA28?style=for-the-badge\&logo=firebase\&logoColor=black)
-
----
-
 
 ## 👩‍💻 Author
 
 **Adrika Mandal**
 🔗 [LinkedIn](https://www.linkedin.com/in/adrika-mandal-753226246/)
-
----
 
 ## ⭐ Final Note
 
